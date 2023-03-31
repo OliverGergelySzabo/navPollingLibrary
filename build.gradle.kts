@@ -20,6 +20,9 @@ dependencies {
 publishing {
     publications {
         register<MavenPublication>("release") {
+            groupId = "com.github.OliverGergelySzabo"
+            artifactId = "navPollingLibrary"
+            version = "1.0-SNAPSHOT"
             from(components["kotlin"])
         }
     }
