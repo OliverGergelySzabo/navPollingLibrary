@@ -20,7 +20,7 @@ dependencies {
 publishing {
     publications {
         register<MavenPublication>("release") {
-
+            from(components["kotlin"])
         }
     }
 }
