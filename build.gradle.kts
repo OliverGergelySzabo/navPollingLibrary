@@ -16,3 +16,11 @@ dependencies {
     implementation("org.springframework:spring-core:5.3.8")
     implementation("org.springframework:spring-context:5.3.8")
 }
+
+publishing {
+    publications {
+        register<MavenPublication>("release") {
+
+        }
+    }
+}
