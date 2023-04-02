@@ -13,6 +13,7 @@ repositories {
 
 dependencies {
     implementation(kotlin("stdlib"))
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.springframework:spring-core:5.3.8")
     implementation("org.springframework:spring-context:5.3.8")
 }
