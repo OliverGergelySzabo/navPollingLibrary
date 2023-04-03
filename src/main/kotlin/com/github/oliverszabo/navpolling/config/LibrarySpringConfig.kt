@@ -5,4 +5,4 @@ import org.springframework.context.annotation.Configuration
 
 @ComponentScan(basePackages = ["com.github.oliverszabo.navpolling"])
 @Configuration
-open class NavPollingLibraryConfig
+open class LibrarySpringConfig

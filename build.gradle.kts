@@ -18,6 +18,7 @@ dependencies {
     implementation("org.springframework:spring-core:5.3.8")
     implementation("org.springframework:spring-context:5.3.8")
     implementation("org.slf4j:slf4j-api:1.7.31")
+    implementation("javax.annotation:javax.annotation-api:1.3.2")
 
     testImplementation(platform("org.junit:junit-bom:5.9.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
