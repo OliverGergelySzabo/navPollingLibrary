@@ -72,4 +72,8 @@ abstract class InvoiceFeed(
     fun getPastFetchingPeriod(): Int {
         return pastFetchingPeriod
     }
+
+    fun getUsers(): Set<TechnicalUser> {
+        return users
+    }
 }

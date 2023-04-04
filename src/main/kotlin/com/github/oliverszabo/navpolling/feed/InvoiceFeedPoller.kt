@@ -8,5 +8,9 @@ class InvoiceFeedPoller(
 ): Runnable {
     override fun run() {
         if(!invoiceFeed.isRunning()) return
+        //todo: optimize for the case when only invoice digest data is needed
+        invoiceFeed.getUsers().forEach {
+
+        }
     }
 }
