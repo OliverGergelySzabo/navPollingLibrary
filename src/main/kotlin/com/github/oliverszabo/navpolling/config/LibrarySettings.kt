@@ -82,14 +82,14 @@ class LibrarySettings(
         return specifiedDefaultPastFetchingPeriod
     }
 
-    class PropertyNames {
+    class PropertyNames private constructor() {
         companion object {
             const val POLLING_POOL_SIZE = "nav-polling.polling-pool-size"
             const val POLLING_FREQUENCY = "nav-polling.polling-frequency"
             const val DEFAULT_PAST_FETCHING_PERIOD = "nav-polling.default-past-fetching-period"
         }
     }
-    class DefaultValues {
+    class DefaultValues private constructor() {
         companion object {
             const val pollingPoolSize = 5
             val pollingFrequency = PeriodicTrigger(1, TimeUnit.DAYS)
