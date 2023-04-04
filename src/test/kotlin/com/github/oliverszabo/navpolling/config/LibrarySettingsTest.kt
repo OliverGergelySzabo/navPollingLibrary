@@ -1,10 +1,13 @@
 package com.github.oliverszabo.navpolling.config
 
+import com.github.oliverszabo.navpolling.api.exception.NavPollingLibraryInitializationException
+import com.github.oliverszabo.navpolling.util.ErrorMessages
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.core.env.Environment
 import org.springframework.scheduling.support.CronTrigger
 import org.springframework.scheduling.support.PeriodicTrigger
@@ -31,7 +34,14 @@ class LibrarySettingsTest {
         every { environment.getProperty<Int?>(LibrarySettings.PropertyNames.POLLING_POOL_SIZE, any()) } returns expectedSize
         val settings = createLibrarySettings()
         assertEquals(expectedSize, settings.pollingPoolSize)
+    }
 
+    @Test
+    fun ifPollingPoolSizeBelowOneIsSpecifiedThenTheCorrectErrorIsReturned() {
+        every { environment.getProperty<Int?>(LibrarySettings.PropertyNames.POLLING_POOL_SIZE, any()) } returns 0
+        createLibrarySettingsAndAssertException(
+            ErrorMessages.propertyMustBeGreaterThan(LibrarySettings.PropertyNames.POLLING_POOL_SIZE, 0)
+        )
     }
 
     @Test
@@ -50,6 +60,14 @@ class LibrarySettingsTest {
     }
 
     @Test
+    fun ifDefaultPastFetchingPeriodBelowZeroIsSpecifiedThenTheCorrectErrorIsReturned() {
+        every { environment.getProperty<Int?>(LibrarySettings.PropertyNames.DEFAULT_PAST_FETCHING_PERIOD, any()) } returns -1
+        createLibrarySettingsAndAssertException(
+            ErrorMessages.propertyMustBeGreaterThanOrEqualTo(LibrarySettings.PropertyNames.DEFAULT_PAST_FETCHING_PERIOD, 0)
+        )
+    }
+
+    @Test
     fun ifPollingFrequencyIsNotSpecifiedThenTheDefaultValueIsReturned() {
         val settings = createLibrarySettings()
         assertEquals(LibrarySettings.DefaultValues.pollingFrequency, settings.pollingFrequency)
@@ -57,7 +75,7 @@ class LibrarySettingsTest {
 
     @Test
     fun ifPeriodicPollingFrequencyIsSpecifiedThenTheCorrectValueIsReturned() {
-        val expectedTrigger = PeriodicTrigger(2, TimeUnit.HOURS)
+        var expectedTrigger = PeriodicTrigger(2, TimeUnit.HOURS)
 
         every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "2 HOURS"
         var settings = createLibrarySettings()
@@ -74,17 +92,73 @@ class LibrarySettingsTest {
         every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "   2      HOURS         "
         settings = createLibrarySettings()
         assertEquals(expectedTrigger, settings.pollingFrequency)
+
+        expectedTrigger = PeriodicTrigger(1, TimeUnit.MINUTES)
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "1 MINUTES"
+        settings = createLibrarySettings()
+        assertEquals(expectedTrigger, settings.pollingFrequency)
     }
 
     @Test
     fun ifCronPollingFrequencyIsSpecifiedThenTheCorrectValueIsReturned() {
-        val cron = "0 3 0 * * *"
+        var cron = "0 3 0 * * *"
         every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns cron
-        val settings = createLibrarySettings()
+        var settings = createLibrarySettings()
         assertEquals(CronTrigger(cron), settings.pollingFrequency)
+
+        cron = "2 * * * * *"
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns cron
+        settings = createLibrarySettings()
+        assertEquals(CronTrigger(cron), settings.pollingFrequency)
+    }
+
+    @Test
+    fun ifInvalidPollingFrequencyIsSpecifiedThenTheCorrectErrorIsReturned() {
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "2 PERC"
+        createLibrarySettingsAndAssertException(LibrarySettings.INVALID_POLLING_FREQUENCY_ERROR)
+
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "daslkjasfj"
+        createLibrarySettingsAndAssertException(LibrarySettings.INVALID_POLLING_FREQUENCY_ERROR)
+
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "212312312"
+        createLibrarySettingsAndAssertException(LibrarySettings.INVALID_POLLING_FREQUENCY_ERROR)
+
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "0 3 e * * *"
+        createLibrarySettingsAndAssertException(LibrarySettings.INVALID_POLLING_FREQUENCY_ERROR)
+
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "60 3 * * * *"
+        createLibrarySettingsAndAssertException(LibrarySettings.INVALID_POLLING_FREQUENCY_ERROR)
+    }
+
+    @Test
+    fun ifInvalidPollingFrequencyLessThanOneMinuteIsSpecifiedThenTheCorrectErrorIsReturned() {
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "30 SECONDS"
+        createLibrarySettingsAndAssertException(LibrarySettings.POLLING_FREQUENCY_IS_LESS_THAN_1_MIN_ERROR)
+
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "59 SECONDS"
+        createLibrarySettingsAndAssertException(LibrarySettings.POLLING_FREQUENCY_IS_LESS_THAN_1_MIN_ERROR)
+
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "30 SECONDS"
+        createLibrarySettingsAndAssertException(LibrarySettings.POLLING_FREQUENCY_IS_LESS_THAN_1_MIN_ERROR)
+
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "*/10 * * * * *"
+        createLibrarySettingsAndAssertException(LibrarySettings.POLLING_FREQUENCY_IS_LESS_THAN_1_MIN_ERROR)
+
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "1,59 * * * * *"
+        createLibrarySettingsAndAssertException(LibrarySettings.POLLING_FREQUENCY_IS_LESS_THAN_1_MIN_ERROR)
+
+        every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "*/59 * * * * *"
+        createLibrarySettingsAndAssertException(LibrarySettings.POLLING_FREQUENCY_IS_LESS_THAN_1_MIN_ERROR)
     }
 
     private fun createLibrarySettings(): LibrarySettings {
         return LibrarySettings(environment)
+    }
+
+    private fun createLibrarySettingsAndAssertException(expectedMessage: String) {
+        val exception =  assertThrows<NavPollingLibraryInitializationException>() {
+            createLibrarySettings()
+        }
+        assertEquals(expectedMessage, exception.message)
     }
 }

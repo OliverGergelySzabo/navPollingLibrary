@@ -1,6 +1,5 @@
 package com.github.oliverszabo.navpolling.model
 
-
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import java.math.BigDecimal
 import java.time.LocalDate
