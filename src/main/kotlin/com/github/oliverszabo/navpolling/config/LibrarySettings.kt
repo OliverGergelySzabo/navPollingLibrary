@@ -5,13 +5,10 @@ import com.github.oliverszabo.navpolling.util.ErrorMessages
 import org.springframework.core.env.Environment
 import org.springframework.core.env.getProperty
 import org.springframework.scheduling.Trigger
-import org.springframework.scheduling.support.CronExpression
 import org.springframework.scheduling.support.CronTrigger
 import org.springframework.scheduling.support.PeriodicTrigger
 import org.springframework.stereotype.Component
 import java.time.Duration
-import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalUnit
 import java.util.concurrent.TimeUnit
 
 @Component
@@ -25,19 +22,10 @@ class LibrarySettings(
             "The polling frequency specified in '${PropertyNames.POLLING_FREQUENCY}' cannot have a period less than 1 minute."
     }
 
-    val pollingPoolSize: Int = initializePollingPoolSize()
+    val pollingPoolSize: Int = initializeThreadPoolSize(PropertyNames.POLLING_POOL_SIZE, DefaultValues.pollingPoolSize)
+    val connectionPoolSize: Int = initializeThreadPoolSize(PropertyNames.CONNECTION_POOL_SIZE, DefaultValues.connectionPoolSize)
     val pollingFrequency: Trigger = initializePollingFrequency()
     val defaultPastFetchingPeriod: Int = initializeDefaultPastFetchingPeriod()
-
-    private fun initializePollingPoolSize(): Int {
-        val specifiedPollingPoolSize = environment.getProperty<Int?>(PropertyNames.POLLING_POOL_SIZE) ?: DefaultValues.pollingPoolSize
-        if(specifiedPollingPoolSize < 1) {
-            throw NavPollingLibraryInitializationException(
-                ErrorMessages.propertyMustBeGreaterThan(PropertyNames.POLLING_POOL_SIZE, 0)
-            )
-        }
-        return specifiedPollingPoolSize
-    }
 
     private fun initializePollingFrequency(): Trigger {
         val specifiedPollingFrequency = environment.getProperty(PropertyNames.POLLING_FREQUENCY)
@@ -82,9 +70,20 @@ class LibrarySettings(
         return specifiedDefaultPastFetchingPeriod
     }
 
+    private fun initializeThreadPoolSize(propertyName: String, defaultSize: Int): Int {
+        val specifiedPoolSize = environment.getProperty<Int?>(propertyName) ?: defaultSize
+        if(specifiedPoolSize < 1) {
+            throw NavPollingLibraryInitializationException(
+                ErrorMessages.propertyMustBeGreaterThan(propertyName, 0)
+            )
+        }
+        return specifiedPoolSize
+    }
+
     class PropertyNames private constructor() {
         companion object {
             const val POLLING_POOL_SIZE = "nav-polling.polling-pool-size"
+            const val CONNECTION_POOL_SIZE = "nav-polling.connection-pool-size"
             const val POLLING_FREQUENCY = "nav-polling.polling-frequency"
             const val DEFAULT_PAST_FETCHING_PERIOD = "nav-polling.default-past-fetching-period"
         }
@@ -92,6 +91,7 @@ class LibrarySettings(
     class DefaultValues private constructor() {
         companion object {
             const val pollingPoolSize = 5
+            const val connectionPoolSize = 10
             val pollingFrequency = PeriodicTrigger(1, TimeUnit.DAYS)
             const val defaultPastFetchingPeriod = 0
         }

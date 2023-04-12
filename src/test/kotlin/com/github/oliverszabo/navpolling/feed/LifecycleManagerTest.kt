@@ -1,6 +1,7 @@
 package com.github.oliverszabo.navpolling.feed
 
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
+import com.github.oliverszabo.navpolling.communication.NavQueryService
 import com.github.oliverszabo.navpolling.config.LibrarySettings
 import io.mockk.*
 import org.junit.jupiter.api.AfterEach
@@ -19,6 +20,7 @@ import java.util.concurrent.TimeUnit
 class LifecycleManagerTest {
     private val feeds = IntRange(0, 1).map { mockk<InvoiceFeed>(relaxed = true) }
     private val librarySettings = mockk<LibrarySettings>(relaxed = true)
+    private val navQueryService = mockk<NavQueryService>(relaxed = true)
     private val logger = mockk<Logger>(relaxed = true)
     private val trigger = PeriodicTrigger(1, TimeUnit.DAYS)
 
@@ -87,8 +89,7 @@ class LifecycleManagerTest {
         assertEquals(feeds.size, createdPollers.size)
         feeds.forEach { feed ->
             verify(exactly = 1) {
-                feed.loadUsers()
-                feed.start()
+                feed.init()
             }
             verify(exactly = feeds.size) {
                 anyConstructed<ThreadPoolTaskScheduler>().schedule(any<InvoiceFeedPoller>(), any<Trigger>())
@@ -108,12 +109,12 @@ class LifecycleManagerTest {
         manager!!.stop()
 
         feeds.forEach {
-            verify(exactly = 1) { it.stop() }
+            verify(exactly = 1) { it.destroy() }
         }
         assertFalse(manager!!.isRunning)
     }
 
     private fun createLifeCycleManager() {
-        manager = LifecycleManager(feeds, librarySettings)
+        manager = LifecycleManager(feeds, librarySettings, navQueryService)
     }
 }

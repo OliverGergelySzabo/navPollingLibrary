@@ -1,6 +1,7 @@
 plugins {
     kotlin("jvm") version "1.5.21"
     `maven-publish`
+
 }
 
 group = "com.github.oliverszabo"
@@ -14,6 +15,8 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib"))
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.5.2")
 
     implementation("org.springframework:spring-core:5.3.8")
     implementation("org.springframework:spring-context:5.3.8")
@@ -21,6 +24,7 @@ dependencies {
     implementation(platform("com.fasterxml.jackson:jackson-bom:2.12.0"))
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     implementation("org.slf4j:slf4j-api:1.7.31")
     implementation("javax.annotation:javax.annotation-api:1.3.2")
@@ -31,13 +35,11 @@ dependencies {
 }
 
 tasks {
-    /*withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions {
-            freeCompilerArgs = listOf("-Xjsr305=strict")
-            jvmTarget = "11"
-            languageVersion = "1.5"
+            freeCompilerArgs = listOf("-Xjvm-default=all")
         }
-    }*/
+    }
     test {
         useJUnitPlatform()
         testLogging {

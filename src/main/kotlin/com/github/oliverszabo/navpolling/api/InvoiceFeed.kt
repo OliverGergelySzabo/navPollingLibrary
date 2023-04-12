@@ -4,6 +4,7 @@ import com.github.oliverszabo.navpolling.api.exception.NavPollingLibraryInitiali
 import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.util.ErrorMessages
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.Instant
 import javax.annotation.PostConstruct
 
 
@@ -13,6 +14,7 @@ abstract class InvoiceFeed(
     private var pastFetchingPeriod: Int = pastFetchingPeriod ?: -1
     private var isRunning = false
     private val users: MutableSet<TechnicalUser> = mutableSetOf()
+    internal var state: State = State.default()
 
     @Autowired
     private lateinit var librarySettings: LibrarySettings
@@ -25,7 +27,7 @@ abstract class InvoiceFeed(
     }
 
     @PostConstruct
-    fun init() {
+    fun postConstruct() {
         if(pastFetchingPeriod == -1) {
             pastFetchingPeriod = librarySettings.defaultPastFetchingPeriod
         }
@@ -33,16 +35,23 @@ abstract class InvoiceFeed(
 
     abstract fun initialUsers(): Set<TechnicalUser>
 
-    open fun loadState(): Any {
-        return Any()
+    open fun loadState(): State {
+        return state
     }
 
-    open fun saveState(feedState: Any) {
+    open fun saveState(feedState: State) {
 
     }
 
-    fun loadUsers() {
+    internal fun init() {
         users.addAll(initialUsers())
+        state = loadState()
+        start()
+    }
+
+    internal fun destroy() {
+        saveState(state)
+        stop()
     }
 
     fun addUser(user: TechnicalUser) {
@@ -75,5 +84,13 @@ abstract class InvoiceFeed(
 
     fun getUsers(): Set<TechnicalUser> {
         return users
+    }
+
+    class State(val pollingCompleteUntil: Instant) {
+        companion object {
+            fun default(): State {
+                return State(Instant.now())
+            }
+        }
     }
 }

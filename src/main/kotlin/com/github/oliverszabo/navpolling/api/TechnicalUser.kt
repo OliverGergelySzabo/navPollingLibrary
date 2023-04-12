@@ -2,7 +2,7 @@ package com.github.oliverszabo.navpolling.api
 
 class TechnicalUser(
     val login: String,
-    val passwordHash: String,
+    val password: String,
     val taxNumber: String,
     val sigKey: String,
     val pollingDirections: Set<InvoiceDirection> = InvoiceDirection.values().toSet()

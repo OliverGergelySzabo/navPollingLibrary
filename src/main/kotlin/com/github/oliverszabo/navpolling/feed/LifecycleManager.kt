@@ -1,6 +1,7 @@
 package com.github.oliverszabo.navpolling.feed
 
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
+import com.github.oliverszabo.navpolling.communication.NavQueryService
 import com.github.oliverszabo.navpolling.config.LibrarySettings
 import org.slf4j.LoggerFactory
 import org.springframework.context.SmartLifecycle
@@ -10,7 +11,8 @@ import org.springframework.stereotype.Component
 @Component
 class LifecycleManager(
     private val invoiceFeeds: List<InvoiceFeed>,
-    private val librarySettings: LibrarySettings
+    private val librarySettings: LibrarySettings,
+    private val navQueryService: NavQueryService,
 ): SmartLifecycle {
     companion object {
         private val log = LoggerFactory.getLogger(LifecycleManager::class.java)
@@ -27,16 +29,15 @@ class LifecycleManager(
 
     override fun start() {
         invoiceFeeds.forEach { feed ->
-            feed.loadUsers()
-            feed.start()
-            pollingScheduler.schedule(InvoiceFeedPoller(feed), librarySettings.pollingFrequency)
+            feed.init()
+            pollingScheduler.schedule(InvoiceFeedPoller(feed, navQueryService), librarySettings.pollingFrequency)
         }
         isRunning = true
         log.info(START_MESSAGE_TEMPLATE.format(invoiceFeeds.size))
     }
 
     override fun stop() {
-        invoiceFeeds.forEach { it.stop() }
+        invoiceFeeds.forEach { it.destroy() }
         isRunning = false
     }
 
