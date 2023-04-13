@@ -7,8 +7,7 @@ class QueryInvoiceDataRequest(
     val invoiceNumber: String,
     val invoiceDirection: InvoiceDirection,
     val supplierTaxNumber: String? = null
-) : RequestBase() {
-
+): RequestBase() {
     private data class InvoiceNumberQuery(
         val invoiceNumber : String,
         val invoiceDirection : InvoiceDirection,
@@ -23,7 +22,7 @@ class QueryInvoiceDataRequest(
 
     override val command = "queryInvoiceData"
 
-    override fun getXml(config: Config): String {
+    override fun toXml(config: Config): String {
         return generateXml(RequestRoot(config, InvoiceNumberQuery(invoiceNumber, invoiceDirection, supplierTaxNumber)))
     }
 }

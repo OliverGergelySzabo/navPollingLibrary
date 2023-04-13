@@ -8,31 +8,28 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator
 import com.github.oliverszabo.navpolling.util.hashString
+import com.github.oliverszabo.navpolling.util.randomHex
 import java.security.MessageDigest
+import java.security.SecureRandom
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import java.util.*
 
 abstract class RequestBase {
     companion object {
-        private val API_NS = "http://schemas.nav.gov.hu/OSA/3.0/api";
-        private val COMMON_NS = "http://schemas.nav.gov.hu/NTCA/1.0/common";
-
-        private fun generateRequestId() : String{
-            return (UUID.randomUUID().toString() + UUID.randomUUID().toString()).filter { it.isLetterOrDigit() }.substring(0,30)
+        private const val API_NS = "http://schemas.nav.gov.hu/OSA/3.0/api"
+        private const val COMMON_NS = "http://schemas.nav.gov.hu/NTCA/1.0/common"
+        private val secureRandom = SecureRandom()
+        private val xmlMapper = XmlMapper().apply {
+            setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
+            enable(SerializationFeature.INDENT_OUTPUT)
+            configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true)
         }
 
         private fun generateRequestSignature(requestId : String, timestamp: Instant, sigKey: String) : String {
             val signatureTimeFormat = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneId.of("UTC"))
             return MessageDigest.getInstance("SHA3-512").hashString(requestId + signatureTimeFormat.format(timestamp) + sigKey)
-        }
-
-        val xmlMapper = XmlMapper().apply {
-            setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
-            enable(SerializationFeature.INDENT_OUTPUT)
-            configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true)
         }
     }
 
@@ -65,17 +62,6 @@ abstract class RequestBase {
         )
     }
 
-    protected data class SoftwareData(
-        val softwareId : String,
-        val softwareName : String,
-        val softwareOperation : String,
-        val softwareMainVersion : String,
-        val softwareDevName : String,
-        val softwareDevContact : String,
-        val softwareDevCountryCode : String? = null,
-        val softwareDevTaxNumber : String? = null,
-    )
-
     protected data class RelationalQueryParam(
         val queryOperator: QueryOperator,
         val queryValue: String
@@ -83,22 +69,21 @@ abstract class RequestBase {
 
     @JsonPropertyOrder("common:header","common:user","software")
     protected open class RootBase(config: Config) {
-
         @field:JacksonXmlProperty(localName = "common:header")
         val header: Header
         @field:JacksonXmlProperty(localName = "common:user")
         val userData: UserData
-        @field:JacksonXmlProperty(localName = "software")
-        val softwareData: SoftwareData
+        val software: Software
 
         init {
             val now = Instant.now()
-            val requestId = generateRequestId()
-            this.header = Header(
+            val requestId = secureRandom.randomHex(30)
+
+            header = Header(
                 requestId = requestId,
                 timestamp = now.truncatedTo(ChronoUnit.MILLIS).toString()
             )
-            this.userData = UserData(
+            userData = UserData(
                 login = config.user.login,
                 passwordHash = UserData.HashString(config.user.passwordHash, "SHA-512"),
                 taxNumber = config.user.taxNumber,
@@ -107,28 +92,19 @@ abstract class RequestBase {
                     "SHA3-512"
                 )
             )
-            this.softwareData = SoftwareData(
-                config.software.softwareId,
-                config.software.softwareName,
-                config.software.softwareOperation.toString(),
-                config.software.softwareMainVersion,
-                config.software.softwareDevName,
-                config.software.softwareDevContact,
-                config.software.softwareDevCountryCode,
-                config.software.softwareDevTaxNumber
-            )
+            this.software = config.software
         }
     }
 
     protected fun generateXml(payload: Any): String {
-        var ret = xmlMapper.writeValueAsString(payload)
-        val rootName = ret.split('<','>').filter { !it.matches("\\s*".toRegex()) } [1]
+        val xmlWithoutNamespaces = xmlMapper.writeValueAsString(payload)
+        val rootName = xmlWithoutNamespaces.split('<','>').filter { !it.matches("\\s*".toRegex()) }[1]
         //inserting namespaces
-        ret = ret.replaceFirst(rootName, """$rootName xmlns:common="$COMMON_NS" xmlns="$API_NS"""")
-        return ret
+        //println(xmlWithoutNamespaces.replaceFirst(rootName, """$rootName xmlns:common="$COMMON_NS" xmlns="$API_NS""""))
+        return xmlWithoutNamespaces.replaceFirst(rootName, """$rootName xmlns:common="$COMMON_NS" xmlns="$API_NS"""")
     }
 
     abstract val command: String
 
-    abstract fun getXml(config: Config): String
+    abstract fun toXml(config: Config): String
 }

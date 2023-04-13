@@ -5,6 +5,7 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import java.security.MessageDigest
+import java.security.SecureRandom
 import java.time.Instant
 
 fun byteToHex(b: Byte) : String{
@@ -25,9 +26,15 @@ fun sha512Hash(s: String) : String {
 }
 
 fun MessageDigest.hashString(s: String) : String {
-    return this.digest(s.toByteArray()).map { byteToHex(it) }.joinToString(separator = "")
+    return digest(s.toByteArray()).map { byteToHex(it) }.joinToString(separator = "")
 }
 
 fun Instant.plusDays(daysToAdd: Long): Instant {
     return plusSeconds(86400 * daysToAdd)
+}
+
+fun SecureRandom.randomHex(length: Int): String {
+    val bytes = ByteArray(length)
+    nextBytes(bytes)
+    return bytes.joinToString(separator = "") { byteToHex(it) }.substring(0, length)
 }

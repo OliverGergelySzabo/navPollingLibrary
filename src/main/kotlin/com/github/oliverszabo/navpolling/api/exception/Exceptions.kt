@@ -1,3 +1,9 @@
 package com.github.oliverszabo.navpolling.api.exception
 
-class NavPollingLibraryInitializationException(message: String?, cause: Throwable? = null): Exception(message, cause)
+open class NavPollingLibraryException(message: String? = null, cause: Throwable? = null): Exception(message, cause)
+
+class NavPollingLibraryInitializationException(message: String?, cause: Throwable? = null): NavPollingLibraryException(message, cause)
+
+class NavInvoiceServiceConnectionException(cause: Throwable): NavPollingLibraryException(cause = cause)
+
+class NavQueryException(val funcCode: String?, val errorCode: String?, message: String?): NavPollingLibraryException(message)

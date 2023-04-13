@@ -15,7 +15,6 @@ class QueryInvoiceDigestRequest(
     private val currency: String? = null,
     private val minPaymentDeadline: LocalDate? = null
 ): RequestBase() {
-
     private data class DateInterval(
         val dateFrom : String,
         val dateTo: String
@@ -53,17 +52,17 @@ class QueryInvoiceDigestRequest(
         val page: Int,
         val invoiceDirection : InvoiceDirection,
         val invoiceQueryParams: InvoiceQueryParams
-    ) : RootBase(config)
+    ): RootBase(config)
 
     override val command = "queryInvoiceDigest"
 
-    override fun getXml(config: Config) : String{
+    override fun toXml(config: Config) : String{
         val additionalQueryParams = if(paymentMethod != null || currency != null)
             AdditionalQueryParams(paymentMethod, currency) else null
         val relationalQueryParams = if(minPaymentDeadline != null)
             RelationalQueryParams(RelationalQueryParam(QueryOperator.GTE, minPaymentDeadline.toString())) else null
 
-        return this.generateXml(
+        return generateXml(
             RequestRoot(
                 config,
                 page,

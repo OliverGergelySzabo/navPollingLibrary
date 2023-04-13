@@ -1,9 +1,10 @@
 package com.github.oliverszabo.navpolling.communication
 
+import com.github.oliverszabo.navpolling.api.exception.NavInvoiceServiceConnectionException
+import com.github.oliverszabo.navpolling.api.exception.NavQueryException
 import com.github.oliverszabo.navpolling.communication.dto.*
 import com.github.oliverszabo.navpolling.util.createXmlMapper
 import kotlinx.coroutines.future.await
-import org.slf4j.LoggerFactory
 import java.net.SocketException
 import java.net.URI
 import java.net.http.HttpClient
@@ -18,12 +19,10 @@ import javax.net.ssl.X509TrustManager
 
 class NavClient(private val softwareInfo: Software) {
     companion object{
-        private val TEST_URL = "https://api-test.onlineszamla.nav.gov.hu/invoiceService/v3"
-        private val PROD_URL = "https://api.onlineszamla.nav.gov.hu/invoiceService/v3"
+        private const val TEST_API_URL = "https://api-test.onlineszamla.nav.gov.hu/invoiceService/v3"
+        private const val PROD_API_URL = "https://api.onlineszamla.nav.gov.hu/invoiceService/v3"
 
         private val xmlMapper = createXmlMapper()
-        private val log = LoggerFactory.getLogger(NavClient::class.java)
-
         private val navTrustManager = arrayOf<TrustManager>(
             object: X509TrustManager {
                 override fun getAcceptedIssuers(): Array<X509Certificate> {
@@ -51,26 +50,23 @@ class NavClient(private val softwareInfo: Software) {
 
     suspend fun <T: RequestBase, R> query(technicalUser: NavTechnicalUser, request: T, resultClass: Class<R>): R {
         val httpRequest = HttpRequest.newBuilder()
-            .uri(URI.create("$PROD_URL/${request.command}"))
+            .uri(URI.create("$PROD_API_URL/${request.command}"))
             .timeout(Duration.ofSeconds(5))
             .header("Content-Type", "application/xml")
             .header("Accept", "*/*")
-            .POST(HttpRequest.BodyPublishers.ofString(request.getXml(Config(technicalUser, softwareInfo))))
+            .POST(HttpRequest.BodyPublishers.ofString(request.toXml(Config(technicalUser, softwareInfo))))
             .build()
 
         try {
             val httpResponse = httpClient.sendAsync(httpRequest, BodyHandlers.ofString()).await()
             if(httpResponse.statusCode() != 200) {
                 val navError = xmlMapper.readValue(httpResponse.body(), ErrorResponse::class.java).result
-                //todo: throw proper exception
-                throw Exception(navError?.funcCode ?: ""/*, result?.errorCode ?: "", result?.message ?: ""*/)
+                throw NavQueryException(navError?.funcCode, navError?.errorCode, navError?.message)
             }
             return xmlMapper.readValue(httpResponse.body(), resultClass)
         } catch (e: SocketException) {
             //in case NAV service is not available or other connection errors
-            log.warn("A NAV connection error occurred, message: ${e.message}")
-            //todo: throw proper exception
-            throw Exception("navConnectionError")
+            throw NavInvoiceServiceConnectionException(e)
         }
     }
 }
