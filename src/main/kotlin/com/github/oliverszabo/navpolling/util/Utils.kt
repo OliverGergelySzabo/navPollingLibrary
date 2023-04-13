@@ -7,6 +7,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Instant
+import java.time.temporal.TemporalUnit
 
 fun byteToHex(b: Byte) : String{
     val ret = b.toUByte().toString(16).uppercase()
@@ -26,11 +27,19 @@ fun sha512Hash(s: String) : String {
 }
 
 fun MessageDigest.hashString(s: String) : String {
-    return digest(s.toByteArray()).map { byteToHex(it) }.joinToString(separator = "")
+    return digest(s.toByteArray()).joinToString(separator = "") { byteToHex(it) }
 }
 
 fun Instant.plusDays(daysToAdd: Long): Instant {
     return plusSeconds(86400 * daysToAdd)
+}
+
+fun Instant.minusDays(daysToSubtract: Long): Instant {
+    return plusDays(-daysToSubtract)
+}
+
+fun Instant.isTruncatedTo(unit: TemporalUnit): Boolean {
+    return this == truncatedTo(unit)
 }
 
 fun SecureRandom.randomHex(length: Int): String {

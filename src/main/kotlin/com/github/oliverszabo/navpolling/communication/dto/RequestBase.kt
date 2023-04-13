@@ -7,6 +7,8 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText
 import com.fasterxml.jackson.dataformat.xml.ser.ToXmlGenerator
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.oliverszabo.navpolling.util.hashString
 import com.github.oliverszabo.navpolling.util.randomHex
 import java.security.MessageDigest
@@ -16,7 +18,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
-abstract class RequestBase {
+abstract class RequestBase(val config: Config) {
     companion object {
         private const val API_NS = "http://schemas.nav.gov.hu/OSA/3.0/api"
         private const val COMMON_NS = "http://schemas.nav.gov.hu/NTCA/1.0/common"
@@ -25,6 +27,8 @@ abstract class RequestBase {
             setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
             enable(SerializationFeature.INDENT_OUTPUT)
             configure(ToXmlGenerator.Feature.WRITE_XML_DECLARATION, true)
+            registerKotlinModule()
+            registerModule(JavaTimeModule())
         }
 
         private fun generateRequestSignature(requestId : String, timestamp: Instant, sigKey: String) : String {
@@ -106,5 +110,5 @@ abstract class RequestBase {
 
     abstract val command: String
 
-    abstract fun toXml(config: Config): String
+    abstract fun toXml(): String
 }

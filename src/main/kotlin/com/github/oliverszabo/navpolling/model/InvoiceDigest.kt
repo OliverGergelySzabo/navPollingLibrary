@@ -4,27 +4,50 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 
-class InvoiceDigest {
-    var invoiceNumber : String? = null
-    var invoiceOperation : String? = null
-    var invoiceCategory : String? = null
-    var invoiceIssueDate : LocalDate? = null
-    var supplierTaxNumber : String? = null
-    var supplierName : String? = null
-    var customerTaxNumber : String? = null
-    var customerName : String? = null
-    var paymentMethod : String? = null
-    var paymentDate : LocalDate? = null
-    var invoiceAppearance : String? = null
-    var source : String? = null
-    var invoiceDeliveryDate : LocalDate? = null
-    var currency : String? = null
-    var invoiceNetAmount : BigDecimal? = null
-    var invoiceNetAmountHUF : BigDecimal? = null
-    var invoiceVatAmount : BigDecimal? = null
-    var invoiceVatAmountHUF : BigDecimal? = null
-    var transactionId : String? = null
-    var index : Int? = null
-    var insDate : Instant? = null
-    var completenessIndicator : String? = null
+class InvoiceDigest(
+    val invoiceNumber: String,
+    val batchIndex: Int? = null,
+    val invoiceOperation: String,
+    val invoiceCategory: String,
+    val invoiceIssueDate: LocalDate,
+    val supplierTaxNumber: String,
+    val supplierGroupMemberTaxNumber: String? = null,
+    val supplierName: String,
+    val customerTaxNumber: String? = null,
+    val customerGroupMemberTaxNumber: String? = null,
+    val customerName: String? = null,
+    val paymentMethod: String? = null,
+    val paymentDate: LocalDate? = null,
+    val invoiceAppearance: String? = null,
+    val source: String? = null,
+    val invoiceDeliveryDate: LocalDate? = null,
+    val currency: String? = null,
+    val invoiceNetAmount: BigDecimal? = null,
+    val invoiceNetAmountHUF: BigDecimal? = null,
+    val invoiceVatAmount: BigDecimal? = null,
+    val invoiceVatAmountHUF: BigDecimal? = null,
+    val transactionId: String? = null,
+    val index: Int? = null,
+    val originalInvoiceNumber: String? = null,
+    val modificationIndex: Int? = null,
+    val insDate: Instant,
+    val completenessIndicator: Boolean? = null
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as InvoiceDigest
+
+        if (invoiceNumber != other.invoiceNumber) return false
+        if (supplierTaxNumber != other.supplierTaxNumber) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = invoiceNumber.hashCode()
+        result = 31 * result + supplierTaxNumber.hashCode()
+        return result
+    }
 }

@@ -4,10 +4,11 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
 
 class QueryInvoiceDataRequest(
+    config: Config,
     val invoiceNumber: String,
     val invoiceDirection: InvoiceDirection,
     val supplierTaxNumber: String? = null
-): RequestBase() {
+): RequestBase(config) {
     private data class InvoiceNumberQuery(
         val invoiceNumber : String,
         val invoiceDirection : InvoiceDirection,
@@ -22,7 +23,7 @@ class QueryInvoiceDataRequest(
 
     override val command = "queryInvoiceData"
 
-    override fun toXml(config: Config): String {
+    override fun toXml(): String {
         return generateXml(RequestRoot(config, InvoiceNumberQuery(invoiceNumber, invoiceDirection, supplierTaxNumber)))
     }
 }

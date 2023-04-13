@@ -17,7 +17,7 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
-class NavClient(private val softwareInfo: Software) {
+class NavClient {
     companion object{
         private const val TEST_API_URL = "https://api-test.onlineszamla.nav.gov.hu/invoiceService/v3"
         private const val PROD_API_URL = "https://api.onlineszamla.nav.gov.hu/invoiceService/v3"
@@ -48,13 +48,13 @@ class NavClient(private val softwareInfo: Software) {
         .sslContext(SSLContext.getInstance("SSL").apply { init(null, navTrustManager, SecureRandom()) })
         .build()
 
-    suspend fun <T: RequestBase, R> query(technicalUser: NavTechnicalUser, request: T, resultClass: Class<R>): R {
+    suspend fun <T: RequestBase, R> query(request: T, resultClass: Class<R>): R {
         val httpRequest = HttpRequest.newBuilder()
             .uri(URI.create("$PROD_API_URL/${request.command}"))
             .timeout(Duration.ofSeconds(5))
             .header("Content-Type", "application/xml")
             .header("Accept", "*/*")
-            .POST(HttpRequest.BodyPublishers.ofString(request.toXml(Config(technicalUser, softwareInfo))))
+            .POST(HttpRequest.BodyPublishers.ofString(request.toXml()))
             .build()
 
         try {

@@ -6,6 +6,7 @@ import com.github.oliverszabo.navpolling.api.exception.NavQueryException
 import com.github.oliverszabo.navpolling.communication.NavQueryService
 import org.slf4j.LoggerFactory
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class InvoiceFeedPoller(
     //todo: rethink whether it is justified that this is public
@@ -22,7 +23,7 @@ class InvoiceFeedPoller(
 
     override fun run() {
         if(!invoiceFeed.isRunning()) return
-        val currentInstant = Instant.now()
+        val currentInstant = Instant.now().truncatedTo(ChronoUnit.SECONDS)
         try {
             //todo: optimize for the case when only invoice digest data is needed
             val invoices = navQueryService.fetchInvoices(

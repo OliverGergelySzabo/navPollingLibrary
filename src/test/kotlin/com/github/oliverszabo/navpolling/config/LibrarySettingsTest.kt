@@ -45,6 +45,28 @@ class LibrarySettingsTest {
     }
 
     @Test
+    fun ifConnectionPoolSizeIsNotSpecifiedThenTheDefaultValueIsReturned() {
+        val settings = createLibrarySettings()
+        assertEquals(LibrarySettings.DefaultValues.connectionPoolSize, settings.connectionPoolSize)
+    }
+
+    @Test
+    fun ifConnectionPoolSizeIsSpecifiedThenTheCorrectValueIsReturned() {
+        val expectedSize = LibrarySettings.DefaultValues.pollingPoolSize + 5
+        every { environment.getProperty<Int?>(LibrarySettings.PropertyNames.CONNECTION_POOL_SIZE, any()) } returns expectedSize
+        val settings = createLibrarySettings()
+        assertEquals(expectedSize, settings.connectionPoolSize)
+    }
+
+    @Test
+    fun ifConnectionPoolSizeBelowOneIsSpecifiedThenTheCorrectErrorIsReturned() {
+        every { environment.getProperty<Int?>(LibrarySettings.PropertyNames.CONNECTION_POOL_SIZE, any()) } returns 0
+        createLibrarySettingsAndAssertException(
+            ErrorMessages.propertyMustBeGreaterThan(LibrarySettings.PropertyNames.CONNECTION_POOL_SIZE, 0)
+        )
+    }
+
+    @Test
     fun ifDefaultPastFetchingPeriodIsNotSpecifiedThenTheDefaultValueIsReturned() {
         val settings = createLibrarySettings()
         assertEquals(LibrarySettings.DefaultValues.defaultPastFetchingPeriod, settings.defaultPastFetchingPeriod)
@@ -156,7 +178,7 @@ class LibrarySettingsTest {
     }
 
     private fun createLibrarySettingsAndAssertException(expectedMessage: String) {
-        val exception =  assertThrows<NavPollingLibraryInitializationException>() {
+        val exception =  assertThrows<NavPollingLibraryInitializationException> {
             createLibrarySettings()
         }
         assertEquals(expectedMessage, exception.message)

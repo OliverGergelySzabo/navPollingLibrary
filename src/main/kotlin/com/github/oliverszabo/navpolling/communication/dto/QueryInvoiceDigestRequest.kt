@@ -7,23 +7,29 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 class QueryInvoiceDigestRequest(
-    private val insDateFrom: Instant,
-    private val insDateTo: Instant,
-    private val page: Int,
-    private val invoiceDirection: InvoiceDirection,
-    private val paymentMethod: PaymentMethod? = null,
-    private val currency: String? = null,
-    private val minPaymentDeadline: LocalDate? = null
-): RequestBase() {
+    config: Config,
+    val insDateFrom: Instant,
+    val insDateTo: Instant,
+    val page: Int,
+    val invoiceDirection: InvoiceDirection,
+    val paymentMethod: PaymentMethod? = null,
+    val currency: String? = null,
+    val minPaymentDeadline: LocalDate? = null
+): RequestBase(config) {
     private data class DateInterval(
         val dateFrom : String,
         val dateTo: String
     )
 
-    private data class DateTimeInterval(
-        val dateTimeFrom : String,
-        val dateTimeTo: String
-    )
+    private class DateTimeInterval(
+        dateTimeFrom: Instant,
+        dateTimeTo: Instant
+    ) {
+        // jackson converts Instant objects to timestamps instead of is date format
+        // so the toString method has to be called for correct serialization
+        val dateTimeFrom : String = dateTimeFrom.toString()
+        val dateTimeTo: String = dateTimeTo.toString()
+    }
 
     private data class InvoiceQueryParams(
         val mandatoryQueryParams : MandatoryQueryParams,
@@ -56,7 +62,7 @@ class QueryInvoiceDigestRequest(
 
     override val command = "queryInvoiceDigest"
 
-    override fun toXml(config: Config) : String{
+    override fun toXml() : String{
         val additionalQueryParams = if(paymentMethod != null || currency != null)
             AdditionalQueryParams(paymentMethod, currency) else null
         val relationalQueryParams = if(minPaymentDeadline != null)
@@ -70,8 +76,8 @@ class QueryInvoiceDigestRequest(
                 invoiceQueryParams = InvoiceQueryParams(
                     MandatoryQueryParams(
                         insDate = DateTimeInterval(
-                            dateTimeFrom = insDateFrom.truncatedTo(ChronoUnit.SECONDS).toString(),
-                            dateTimeTo = insDateTo.truncatedTo(ChronoUnit.SECONDS).toString()
+                            dateTimeFrom = insDateFrom,
+                            dateTimeTo = insDateTo
                         )
                     ),
                     additionalQueryParams,
