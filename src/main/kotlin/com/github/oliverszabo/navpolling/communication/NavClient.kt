@@ -23,6 +23,7 @@ class NavClient {
         private const val PROD_API_URL = "https://api.onlineszamla.nav.gov.hu/invoiceService/v3"
 
         private val xmlMapper = createXmlMapper()
+        //todo: implement nav cert checking
         private val navTrustManager = arrayOf<TrustManager>(
             object: X509TrustManager {
                 override fun getAcceptedIssuers(): Array<X509Certificate> {

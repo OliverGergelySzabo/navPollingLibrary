@@ -19,6 +19,7 @@ class LibrarySettingsTest {
     @BeforeEach
     fun beforeEach() {
         every { environment.getProperty<Int?>(any(), any()) } returns null
+        every { environment.getProperty<Long?>(any(), any()) } returns null
         every { environment.getProperty(any()) } returns null
     }
 
@@ -171,6 +172,28 @@ class LibrarySettingsTest {
 
         every { environment.getProperty(LibrarySettings.PropertyNames.POLLING_FREQUENCY) } returns "*/59 * * * * *"
         createLibrarySettingsAndAssertException(LibrarySettings.POLLING_FREQUENCY_IS_LESS_THAN_1_MIN_ERROR)
+    }
+
+    @Test
+    fun ifShutdownTimeoutIsNotSpecifiedThenTheDefaultValueIsReturned() {
+        val settings = createLibrarySettings()
+        assertEquals(LibrarySettings.DefaultValues.shutdownTimeout, settings.shutdownTimeout)
+    }
+
+    @Test
+    fun ifShutdownTimeoutIsSpecifiedThenTheCorrectValueIsReturned() {
+        val expectedTimeout = LibrarySettings.DefaultValues.shutdownTimeout + 5
+        every { environment.getProperty<Long?>(LibrarySettings.PropertyNames.SHUTDOWN_TIMEOUT, any()) } returns expectedTimeout
+        val settings = createLibrarySettings()
+        assertEquals(expectedTimeout, settings.shutdownTimeout)
+    }
+
+    @Test
+    fun ifShutdownTimeoutBelowZeroIsSpecifiedThenTheCorrectErrorIsReturned() {
+        every { environment.getProperty<Long?>(LibrarySettings.PropertyNames.SHUTDOWN_TIMEOUT, any()) } returns -1
+        createLibrarySettingsAndAssertException(
+            ErrorMessages.propertyMustBeGreaterThanOrEqualTo(LibrarySettings.PropertyNames.SHUTDOWN_TIMEOUT, 0)
+        )
     }
 
     private fun createLibrarySettings(): LibrarySettings {

@@ -5,16 +5,18 @@ import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.util.ErrorMessages
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.annotation.PostConstruct
-
 
 abstract class InvoiceFeed(
     pastFetchingPeriod: Int? = null
 ) {
     private var pastFetchingPeriod: Int = pastFetchingPeriod ?: -1
-    private var isRunning = false
-    private val users: MutableSet<TechnicalUser> = mutableSetOf()
-    internal var state: State = State.default()
+
+    private var isRunning = AtomicBoolean(false)
+    private var pollingCompleteUntil: Instant = Instant.now()
+    private val users: MutableSet<TechnicalUser> = mutableSetOf() //ConcurrentHashMap.newKeySet()
+    private val newlyAddedTechnicalUserLogins: MutableSet<String> = mutableSetOf()
 
     @Autowired
     private lateinit var librarySettings: LibrarySettings
@@ -27,70 +29,123 @@ abstract class InvoiceFeed(
     }
 
     @PostConstruct
-    fun postConstruct() {
+    private fun postConstruct() {
         if(pastFetchingPeriod == -1) {
             pastFetchingPeriod = librarySettings.defaultPastFetchingPeriod
         }
     }
 
-    abstract fun initialUsers(): Set<TechnicalUser>
-
-    open fun loadState(): State {
-        return state
+    open fun loadState(): State? {
+        return null
     }
 
     open fun saveState(feedState: State) {
 
     }
 
-    internal fun init() {
-        users.addAll(initialUsers())
-        state = loadState()
-        start()
+    open fun loadUsers(): Set<TechnicalUser> {
+        return emptySet()
     }
 
-    internal fun destroy() {
-        saveState(state)
-        stop()
+    open fun saveUsers(users: Set<TechnicalUser>) {
+
     }
 
+    @Synchronized
+    fun getUsers(): Set<TechnicalUser> {
+        return users
+    }
+
+    @Synchronized
     fun addUser(user: TechnicalUser) {
-        TODO()
+        users.add(user)
+        newlyAddedTechnicalUserLogins.add(user.login)
     }
 
-    fun removeUser(userTaxNumber: String) {
-        TODO()
+    @Synchronized
+    fun removeUser(userLogin: String) {
+        users.removeIf { it.login == userLogin }
+        newlyAddedTechnicalUserLogins.remove(userLogin)
     }
 
+    fun removeUser(user: TechnicalUser) {
+        removeUser(user.login)
+    }
+
+    @Synchronized
     fun clearUsers() {
-        TODO()
+        users.clear()
+        newlyAddedTechnicalUserLogins.clear()
     }
 
     fun isRunning(): Boolean {
-        return isRunning
+        return  isRunning.get()
     }
 
     fun start() {
-        isRunning = true
+         isRunning.set(true)
     }
 
     fun stop() {
-        isRunning = false
+         isRunning.set(false)
     }
 
     fun getPastFetchingPeriod(): Int {
         return pastFetchingPeriod
     }
 
-    fun getUsers(): Set<TechnicalUser> {
-        return users
+    @Synchronized
+    internal fun init() {
+        users.addAll(loadUsers())
+        val state = loadState()
+        if(state != null) {
+            pollingCompleteUntil = state.pollingCompleteUntil
+            newlyAddedTechnicalUserLogins.addAll(state.newlyAddedTechnicalUserLogins)
+        }
+        start()
     }
 
-    class State(val pollingCompleteUntil: Instant) {
+    @Synchronized
+    internal fun destroy() {
+        saveState(State(pollingCompleteUntil, newlyAddedTechnicalUserLogins))
+        saveUsers(users)
+        stop()
+    }
+
+    @Synchronized
+    internal fun getUsers(isPastFetchingRequired: Boolean): Set<TechnicalUser> {
+        return users.filter { newlyAddedTechnicalUserLogins.contains(it.login) == isPastFetchingRequired }.toSet()
+    }
+
+    @Synchronized
+    internal fun onPastFetchingCompleted(users: Set<TechnicalUser>) {
+        newlyAddedTechnicalUserLogins.removeAll(users.map { it.login }.toSet())
+    }
+
+    @Synchronized
+    internal fun getPollingCompleteUntil(): Instant {
+        return pollingCompleteUntil
+    }
+
+    @Synchronized
+    internal fun setPollingCompleteUntil(newValue: Instant) {
+        pollingCompleteUntil = newValue
+    }
+
+    //todo: make this class serializable?
+    class State internal constructor(
+        val pollingCompleteUntil: Instant,
+        val newlyAddedTechnicalUserLogins: Set<String>
+    ) {
         companion object {
-            fun default(): State {
-                return State(Instant.now())
+            @JvmStatic
+            fun fromJson(json: String): State {
+                TODO()
             }
+        }
+
+        fun toJson(): String {
+            TODO()
         }
     }
 }

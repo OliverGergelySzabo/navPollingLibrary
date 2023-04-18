@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.Trigger
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import org.springframework.scheduling.support.PeriodicTrigger
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -23,6 +24,9 @@ class LifecycleManagerTest {
     private val navQueryService = mockk<NavQueryService>(relaxed = true)
     private val logger = mockk<Logger>(relaxed = true)
     private val trigger = PeriodicTrigger(1, TimeUnit.DAYS)
+    private val executor = mockk<ScheduledExecutorService>(relaxed = true)
+
+    private val shutdownTimout = 10L
 
     private var manager: LifecycleManager? = null
 
@@ -32,6 +36,11 @@ class LifecycleManagerTest {
         every { anyConstructed<ThreadPoolTaskScheduler>().initialize() } returns Unit
         every { anyConstructed<ThreadPoolTaskScheduler>().schedule(any(), any<Trigger>()) } returns mockk(relaxed = true)
         every { anyConstructed<ThreadPoolTaskScheduler>().getPoolSize() } returns 100
+        every { anyConstructed<ThreadPoolTaskScheduler>().scheduledExecutor } returns executor
+
+        every { executor.shutdown() } returns Unit
+        every { executor.shutdownNow() } returns emptyList()
+        every { executor.awaitTermination(any(), any()) } returns true
 
         mockkConstructor(InvoiceFeedPoller::class)
 
@@ -42,6 +51,7 @@ class LifecycleManagerTest {
 
         every { librarySettings.pollingPoolSize } returns 3
         every { librarySettings.pollingFrequency } returns trigger
+        every { librarySettings.shutdownTimeout } returns shutdownTimout
     }
 
     @AfterEach
@@ -108,6 +118,12 @@ class LifecycleManagerTest {
         manager!!.start()
         manager!!.stop()
 
+        verify(exactly = 1) {
+            executor.shutdown()
+            executor.shutdownNow()
+            executor.awaitTermination(eq(shutdownTimout), eq(TimeUnit.SECONDS))
+            executor.awaitTermination(eq(LifecycleManager.ADDITIONAL_TIMEOUT), eq(TimeUnit.SECONDS))
+        }
         feeds.forEach {
             verify(exactly = 1) { it.destroy() }
         }

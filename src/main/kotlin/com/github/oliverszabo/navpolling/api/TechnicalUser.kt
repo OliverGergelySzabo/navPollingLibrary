@@ -13,16 +13,10 @@ class TechnicalUser(
 
         other as TechnicalUser
         if (login != other.login) return false
-        if (taxNumber != other.taxNumber) return false
-        if (pollingDirections != other.pollingDirections) return false
-
         return true
     }
 
     override fun hashCode(): Int {
-        var result = login.hashCode()
-        result = 31 * result + taxNumber.hashCode()
-        result = 31 * result + pollingDirections.hashCode()
-        return result
+        return login.hashCode()
     }
 }
