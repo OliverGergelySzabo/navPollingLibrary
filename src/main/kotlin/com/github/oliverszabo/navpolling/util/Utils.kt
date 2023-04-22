@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import java.lang.reflect.Field
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Instant
@@ -46,4 +47,9 @@ fun SecureRandom.randomHex(length: Int): String {
     val bytes = ByteArray(length)
     nextBytes(bytes)
     return bytes.joinToString(separator = "") { byteToHex(it) }.substring(0, length)
+}
+
+fun Field.forceGet(obj: Any): Any? {
+    trySetAccessible()
+    return get(obj)
 }
