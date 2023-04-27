@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import java.math.BigDecimal
+import java.math.BigInteger
 import java.time.LocalDate
 
 class InvoiceData(
@@ -20,7 +21,6 @@ class InvoiceData(
         val invoiceHead: InvoiceHead,
         val invoiceLines: InvoiceLines ?= null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "productFeeSummary")
         val productFeeSummaries: List<ProductFeeSummary> ?= null,
         val invoiceSummary: InvoiceSummary
@@ -28,21 +28,19 @@ class InvoiceData(
 
     class InvoiceLines(
         val mergedItemIndicator: Boolean,
-        @field:JacksonXmlElementWrapper(useWrapping=false)
+        
         @field:JacksonXmlProperty(localName = "line")
         val lines: List<Line>,
     )
 
     class Line(
-        val lineNumber: Int,
+        val lineNumber: BigInteger,
         val lineModificationReference: LineModificationReference? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "referencesToOtherLine")
-        val referencesToOtherLines: List<Int>? = null,
+        val referencesToOtherLines: List<BigInteger>? = null,
         val advanceData: AdvanceData? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "productCode")
         val productCodes: List<ProductCode>? = null,
         val lineExpressionIndicator: Boolean,
@@ -71,7 +69,7 @@ class InvoiceData(
     )
 
     class LineModificationReference(
-        val lineNumberReference: Int,
+        val lineNumberReference: BigInteger,
         val lineOperation: String
     )
 
@@ -213,8 +211,6 @@ class InvoiceData(
 
     class ProductFeeSummary(
         val productFeeOperation: String,
-
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         val productFeeData: List<ProductFeeData>,
         val productChargeSum: BigDecimal,
         val paymentEvidenceDocumentData: PaymentEvidenceDocumentData? = null
@@ -244,14 +240,11 @@ class InvoiceData(
 
     class InvoiceSummary(
         val summaryNormal: SummaryNormal? = null,
-
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         val summarySimplified: List<SummarySimplified> ?= null,
         val summaryGrossData: SummaryGrossData? = null,
     )
 
     class SummaryNormal(
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "summaryByVatRate")
         val summariesByVatRate: List<SummaryByVatRate>,
         val invoiceNetAmount: BigDecimal,
@@ -427,63 +420,48 @@ class InvoiceData(
     )
 
     class ConventionalInvoiceInfo(
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "orderNumber")
         val orderNumbers: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "deliveryNote")
         val deliveryNotes: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "shippingDate")
         val shippingDates: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "contractNumber")
         val contractNumbers: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "supplierCompanyCode")
         val supplierCompanyCodes: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "customerCompanyCode")
         val customerCompanyCodes: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "dealerCode")
         val dealerCodes: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "costCenter")
         val costCenters: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "projectNumber")
         val projectNumbers: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "generalLedgerAccountNumber")
         val generalLedgerAccountNumbers: List<String>? = null,
 
-        //@field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JsonProperty("glnNumbersSupplier")
         val glnNumbersSupplier: List<String>? = null,
 
-        //@field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JsonProperty("glnNumbersCustomer")
         val glnNumbersCustomer: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "materialNumber")
         val materialNumbers: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "itemNumber")
         val itemNumbers: List<String>? = null,
 
-        @field:JacksonXmlElementWrapper(useWrapping=false)
         @field:JacksonXmlProperty(localName = "ekaerId")
         val ekaerIds: List<String>? = null,
     )

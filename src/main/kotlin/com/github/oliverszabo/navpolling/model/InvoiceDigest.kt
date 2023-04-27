@@ -1,12 +1,13 @@
 package com.github.oliverszabo.navpolling.model
 
 import java.math.BigDecimal
+import java.math.BigInteger
 import java.time.Instant
 import java.time.LocalDate
 
 class InvoiceDigest(
     val invoiceNumber: String,
-    val batchIndex: Int? = null,
+    val batchIndex: BigInteger? = null,
     val invoiceOperation: String,
     val invoiceCategory: String,
     val invoiceIssueDate: LocalDate,
@@ -27,9 +28,9 @@ class InvoiceDigest(
     val invoiceVatAmount: BigDecimal? = null,
     val invoiceVatAmountHUF: BigDecimal? = null,
     val transactionId: String? = null,
-    val index: Int? = null,
+    val index: BigInteger? = null,
     val originalInvoiceNumber: String? = null,
-    val modificationIndex: Int? = null,
+    val modificationIndex: BigInteger? = null,
     val insDate: Instant,
     val completenessIndicator: Boolean? = null
 ) {

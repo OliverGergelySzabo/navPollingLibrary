@@ -1,40 +1,47 @@
 package com.github.oliverszabo.navpolling.eventpublishing
 
-import com.github.oliverszabo.navpolling.model.InvoiceDigest
 import com.github.oliverszabo.navpolling.util.TypeUtils
-import com.github.oliverszabo.navpolling.util.forceGet
+import com.github.oliverszabo.navpolling.util.firstActualTypeArgument
 import java.lang.reflect.Field
 
-class InvoiceField(
-    val javaField: Field,
-    val modelClass: Class<*>,
-    val parentFieldNames: List<String>,
+abstract class InvoiceField(
+    val javaField: Field
 ) {
-    val longName = "${modelClass.simpleName}.${(parentFieldNames + javaField.name).joinToString(separator = ".")}"
-    val shortName: String
-        get() = javaField.name
-    val isInvoiceDigestField = modelClass == InvoiceDigest::class.java
+    abstract val longName: String
+    protected abstract val modelClass: Class<*>
+    val shortName: String = javaField.name
+    val genericTypeArgument = javaField.firstActualTypeArgument()
+    val isGenericField = genericTypeArgument != null
 
-    fun getValue(invoice: Any): Any? {
-        return getValue(invoice, javaField.type)
+    abstract fun getValue(invoice: Any): Any?
+
+    fun isConvertibleTo(targetField: Field): Boolean {
+        val originalType = javaField.type
+        val targetType = targetField.type
+
+        if(targetType == Any::class.java) return true
+
+        val isOriginalTypeSimple = TypeUtils.isSimpleType(originalType)
+        val isTargetTypeSimple = TypeUtils.isSimpleType(targetType)
+        if (isOriginalTypeSimple xor isTargetTypeSimple) return false
+
+        if (isOriginalTypeSimple) {
+            if (String::class.java == targetType) return true
+            if (TypeUtils.isNumericType(originalType) && TypeUtils.isNumericType(targetType)) return true
+            if (TypeUtils.isDateType(originalType) && TypeUtils.isDateType(targetType)) return true
+            return TypeUtils.isBoolean(originalType) && TypeUtils.isBoolean(targetType)
+        }
+
+        if (isGenericField) {
+            return genericTypeArgument == targetField.firstActualTypeArgument() && originalType == targetType
+        }
+
+        return TypeUtils.isCastableTo(originalType, targetType)
     }
 
-    fun <T> getValue(invoice: Any, valueType: Class<T>): T? {
+    protected fun checkInvoiceTypeMatchesModelClass(invoice: Any) {
         if(invoice.javaClass != modelClass) {
-            throw IllegalArgumentException("The supplied invoice object is not the model object of this InvoiceField")
+            throw IllegalArgumentException("The supplied invoice object's type is not compatible with the model class of this InvoiceField")
         }
-        if(!TypeUtils.isCastableTo(javaField.type, valueType)) {
-            throw IllegalArgumentException("This field cannot be cast to the supplied valueType")
-        }
-        if(parentFieldNames.isEmpty()) {
-            return javaField.forceGet(invoice) as T?
-        }
-        var field = invoice.javaClass.declaredFields.find { it.name == parentFieldNames.first() }!!
-        var value = field.forceGet(invoice) ?: return null
-        parentFieldNames.subList(1, parentFieldNames.size).forEach { fieldName ->
-            field = field.type.declaredFields.find { it.name == fieldName }!!
-            value = field.forceGet(value) ?: return null
-        }
-        return javaField.forceGet(value) as T?
     }
 }
