@@ -32,17 +32,22 @@ class NavQueryService(
         connectionScope.cancel()
     }
 
-    fun fetchInvoices(
+    fun fetchInvoiceDigestsAndData(
         technicalUsers: Set<TechnicalUser>,
         from: Instant,
         to: Instant
-    ): List<Triple<InvoiceData, TechnicalUser, InvoiceDirection>> {
+    ): List<QueryResult> {
         return runBlocking {
             //todo: make this optionally obey nav rate limiting rules
             val client = NavClient()
             return@runBlocking fetchInvoiceDigests(technicalUsers, from, to).map { (invoiceDigest, technicalUser, direction) ->
                 connectionScope.async {
-                    Triple(fetchInvoiceData(client, NavTechnicalUser.from(technicalUser), invoiceDigest, direction), technicalUser, direction)
+                    QueryResult(
+                        fetchInvoiceData(client, NavTechnicalUser.from(technicalUser), invoiceDigest, direction),
+                        invoiceDigest,
+                        technicalUser,
+                        direction
+                    )
                 }
             }.awaitAll()
         }
@@ -52,7 +57,7 @@ class NavQueryService(
         technicalUsers: Set<TechnicalUser>,
         from: Instant,
         to: Instant
-    ): List<Triple<InvoiceDigest, TechnicalUser, InvoiceDirection>> {
+    ): List<DigestQueryResult> {
         if(from > to) {
             throw IllegalArgumentException("The 'from' param cannot be after the 'to' param")
         }
@@ -75,7 +80,7 @@ class NavQueryService(
                     technicalUser.pollingDirections.map { direction ->
                         connectionScope.async {
                             fetchInvoiceDigestsForPeriod(client, NavTechnicalUser.from(technicalUser), direction, from, to).map {
-                                Triple(it, technicalUser, direction)
+                                DigestQueryResult(it, technicalUser, direction)
                             }
                         }
                     }
@@ -87,9 +92,9 @@ class NavQueryService(
                 // while the NAV API has an inclusive upper bound
                 //todo: decide whether additional measures are needed
                 // (i.e. extend invoice state with potential duplicates and make this functions 'to' param inclusive
-                .filter { it.first.insDate != to }
+                .filter { (digest, _, _) -> digest.insDate != to }
                 // removing potential duplicates caused by overlapping boundaries
-                .distinctBy { it.first }
+                .distinctBy { (digest, _, _) -> digest }
         }
     }
 
@@ -164,4 +169,17 @@ class NavQueryService(
             )
         )
     }
+
+    data class QueryResult(
+        val invoiceData: InvoiceData,
+        val invoiceDigest: InvoiceDigest,
+        val technicalUser: TechnicalUser,
+        val invoiceDirection: InvoiceDirection
+    )
+
+    data class DigestQueryResult(
+        val invoiceDigest: InvoiceDigest,
+        val technicalUser: TechnicalUser,
+        val invoiceDirection: InvoiceDirection
+    )
 }

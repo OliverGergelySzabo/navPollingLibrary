@@ -17,3 +17,7 @@ inline fun <reified T: Throwable>assertThrownException(expectedMessage: String, 
     val exception: T = assertThrows(executable)
     assertEquals(expectedMessage, exception.message)
 }
+
+fun assertEmpty(collection: Collection<*>) {
+    assertTrue(collection.isEmpty())
+}

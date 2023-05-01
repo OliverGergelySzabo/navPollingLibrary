@@ -13,8 +13,8 @@ import java.math.BigInteger
 import java.time.*
 
 class EventPublisher(
-    private val eventHandlerObject: Any,
-    private val eventHandlerMethod: Method,
+    val eventHandlerObject: Any,
+    val eventHandlerMethod: Method,
     private val invoiceFieldFactory: InvoiceFieldFactory,
     private val xmlMapper: XmlMapper
 ) {
@@ -77,8 +77,8 @@ class EventPublisher(
     }
 
     fun publishInvoiceArrivedEvent(
-        invoiceDigest: InvoiceDigest,
         invoiceData: InvoiceData,
+        invoiceDigest: InvoiceDigest,
         technicalUser: TechnicalUser,
         invoiceDirection: InvoiceDirection
     ) {
@@ -114,6 +114,10 @@ class EventPublisher(
             )
         }
         callEventHandler(invoiceParameterArgument, technicalUser, invoiceDirection)
+    }
+
+    override fun toString(): String {
+        return "Event publisher for $eventHandlerMethod"
     }
 
     private fun createInvoiceParameterArgument(valuesByTargetFieldName: Map<String, Any?>): Any {

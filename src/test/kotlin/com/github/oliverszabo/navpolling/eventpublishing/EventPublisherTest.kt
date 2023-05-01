@@ -199,7 +199,7 @@ class EventPublisherTest {
             TechnicalUser::class.java,
             InvoiceDirection::class.java
         )
-        createEventPublisher().publishInvoiceArrivedEvent(invoiceDigest, invoiceData, technicalUser, InvoiceDirection.OUTBOUND)
+        createEventPublisher().publishInvoiceArrivedEvent(invoiceData, invoiceDigest, technicalUser, InvoiceDirection.OUTBOUND)
         assertEventHandlerCalledEventHandlerObject(capturedEventHandlerObject)
         assertEventHandlerArguments(
             OnlyInvoiceDataFields(
@@ -220,7 +220,7 @@ class EventPublisherTest {
             TechnicalUser::class.java,
             InvoiceDirection::class.java
         )
-        createEventPublisher().publishInvoiceArrivedEvent(invoiceDigest, invoiceData, technicalUser, InvoiceDirection.OUTBOUND)
+        createEventPublisher().publishInvoiceArrivedEvent(invoiceData, invoiceDigest, technicalUser, InvoiceDirection.OUTBOUND)
         assertEventHandlerCalledEventHandlerObject(capturedEventHandlerObject)
         assertEventHandlerArguments(
             MixedFields(

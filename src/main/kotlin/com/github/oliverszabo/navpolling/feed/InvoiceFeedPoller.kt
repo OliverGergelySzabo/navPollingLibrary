@@ -4,16 +4,15 @@ import com.github.oliverszabo.navpolling.api.InvoiceFeed
 import com.github.oliverszabo.navpolling.api.exception.NavInvoiceServiceConnectionException
 import com.github.oliverszabo.navpolling.api.exception.NavQueryException
 import com.github.oliverszabo.navpolling.communication.NavQueryService
+import com.github.oliverszabo.navpolling.eventpublishing.EventPublisher
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 class InvoiceFeedPoller(
     //todo: rethink whether it is justified that this is public
     val invoiceFeed: InvoiceFeed,
+    private val eventPublishers: List<EventPublisher>,
     private val navQueryService: NavQueryService
 ): Runnable {
     companion object {
@@ -26,24 +25,34 @@ class InvoiceFeedPoller(
         private val log = LoggerFactory.getLogger(InvoiceFeedPoller::class.java)
     }
 
+    private val isOnlyDigestDataRequired = eventPublishers.all { it.isOnlyDigestDataRequired }
+
     override fun run() {
         if(!invoiceFeed.isRunning()) return
-        val currentInstant = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        val to = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        val from = to.minusSeconds(86400 * 180) //invoiceFeed.state.pollingCompleteUntil
         try {
-            //todo: optimize for the case when only invoice digest data is needed
-            val invoices = navQueryService.fetchInvoices(
-                invoiceFeed.getUsers(),
-                currentInstant.minusSeconds(86400 * 180)/*invoiceFeed.state.pollingCompleteUntil*/,
-                currentInstant
-            )
-            invoices.forEach {
+            if(isOnlyDigestDataRequired) {
+                navQueryService.fetchInvoiceDigests(invoiceFeed.getUsers(), from, to).forEach { (digest, user, direction) ->
+                    eventPublishers.forEach {
+                        it.publishInvoiceArrivedEvent(digest, user, direction)
+                    }
+                }
+            } else {
+                navQueryService.fetchInvoiceDigestsAndData(invoiceFeed.getUsers(), from, to).forEach { (data, digest, user, direction) ->
+                    eventPublishers.forEach {
+                        it.publishInvoiceArrivedEvent(data, digest, user, direction)
+                    }
+                }
+            }
+            /*invoices.forEach {
                 println(it.first.invoiceNumber)
                 println(it.first.invoiceMain.invoice.invoiceHead.supplierInfo.supplierBankAccountNumber)
-            }
-            //todo: call event publishers
+            }*/
+
             //invoiceFeed.state = InvoiceFeed.State(currentInstant)
         } catch (e: NavInvoiceServiceConnectionException) {
-            log.error(NAV_CONNECTION_ERROR_MESSAGE_TEMPLATE.format(e.cause!!::class.java.canonicalName, e.cause!!.message))
+            log.error(NAV_CONNECTION_ERROR_MESSAGE_TEMPLATE.format(e.cause!!::class.java.canonicalName, e.cause.message))
         } catch (e: NavQueryException) {
             log.error(NAV_QUERY_ERROR_MESSAGE_TEMPLATE.format(e.funcCode, e.errorCode, e.message))
         } catch (e: InterruptedException) {

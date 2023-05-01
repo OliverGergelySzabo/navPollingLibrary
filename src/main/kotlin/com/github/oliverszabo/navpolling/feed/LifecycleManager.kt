@@ -3,6 +3,7 @@ package com.github.oliverszabo.navpolling.feed
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
 import com.github.oliverszabo.navpolling.communication.NavQueryService
 import com.github.oliverszabo.navpolling.config.LibrarySettings
+import com.github.oliverszabo.navpolling.eventpublishing.EventPublisherFactory
 import org.slf4j.LoggerFactory
 import org.springframework.context.SmartLifecycle
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
@@ -15,6 +16,7 @@ class LifecycleManager(
     private val invoiceFeeds: List<InvoiceFeed>,
     private val librarySettings: LibrarySettings,
     private val navQueryService: NavQueryService,
+    private val eventPublisherFactory: EventPublisherFactory,
 ): SmartLifecycle {
     companion object {
         private val log = LoggerFactory.getLogger(LifecycleManager::class.java)
@@ -35,7 +37,10 @@ class LifecycleManager(
     override fun start() {
         invoiceFeeds.forEach { feed ->
             feed.init()
-            pollingScheduler.schedule(InvoiceFeedPoller(feed, navQueryService), librarySettings.pollingFrequency)
+            pollingScheduler.schedule(
+                InvoiceFeedPoller(feed, eventPublisherFactory.getEventPublishers(feed.javaClass), navQueryService),
+                librarySettings.pollingFrequency
+            )
         }
         isRunning = true
         log.info(START_MESSAGE_TEMPLATE.format(invoiceFeeds.size))
@@ -57,6 +62,7 @@ class LifecycleManager(
     private fun stopPollingScheduler() {
         val executor = pollingScheduler.scheduledExecutor
         executor.shutdown()
+        //todo: this never shuts down before termination, this has to be investigated
         executor.awaitTermination(librarySettings.shutdownTimeout, TimeUnit.SECONDS)
         executor.shutdownNow()
         // wait for an additional second so all jobs are interrupted properly before returning

@@ -3,6 +3,7 @@ package com.github.oliverszabo.navpolling.feed
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
 import com.github.oliverszabo.navpolling.communication.NavQueryService
 import com.github.oliverszabo.navpolling.config.LibrarySettings
+import com.github.oliverszabo.navpolling.eventpublishing.EventPublisherFactory
 import io.mockk.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -19,9 +20,13 @@ import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LifecycleManagerTest {
-    private val feeds = IntRange(0, 1).map { mockk<InvoiceFeed>(relaxed = true) }
+    class Feed: InvoiceFeed(1)
+    class OtherFeed: InvoiceFeed(1)
+
+    private val feeds = listOf(mockk<Feed>(relaxed = true), mockk<OtherFeed>(relaxed = true))
     private val librarySettings = mockk<LibrarySettings>(relaxed = true)
     private val navQueryService = mockk<NavQueryService>(relaxed = true)
+    private val eventPublisherFactory = mockk<EventPublisherFactory>(relaxed = true)
     private val logger = mockk<Logger>(relaxed = true)
     private val trigger = PeriodicTrigger(1, TimeUnit.DAYS)
     private val executor = mockk<ScheduledExecutorService>(relaxed = true)
@@ -52,6 +57,10 @@ class LifecycleManagerTest {
         every { librarySettings.pollingPoolSize } returns 3
         every { librarySettings.pollingFrequency } returns trigger
         every { librarySettings.shutdownTimeout } returns shutdownTimout
+
+        every { eventPublisherFactory.getEventPublishers(any()) } returns emptyList()
+
+        //every { feeds[0].javaClass } returns Feed::class.java
     }
 
     @AfterEach
@@ -100,13 +109,14 @@ class LifecycleManagerTest {
         feeds.forEach { feed ->
             verify(exactly = 1) {
                 feed.init()
-            }
-            verify(exactly = feeds.size) {
-                anyConstructed<ThreadPoolTaskScheduler>().schedule(any<InvoiceFeedPoller>(), any<Trigger>())
+                eventPublisherFactory.getEventPublishers(eq(feed.javaClass))
             }
             val poller = createdPollers.find { it.invoiceFeed == feed }
             assertNotNull(poller)
             createdPollers.remove(poller)
+        }
+        verify(exactly = feeds.size) {
+            anyConstructed<ThreadPoolTaskScheduler>().schedule(any<InvoiceFeedPoller>(), any<Trigger>())
         }
         verify(exactly = 1) { logger.info(eq(LifecycleManager.START_MESSAGE_TEMPLATE.format(feeds.size))) }
         assertTrue(manager!!.isRunning)
@@ -131,6 +141,6 @@ class LifecycleManagerTest {
     }
 
     private fun createLifeCycleManager() {
-        manager = LifecycleManager(feeds, librarySettings, navQueryService)
+        manager = LifecycleManager(feeds, librarySettings, navQueryService, eventPublisherFactory)
     }
 }
