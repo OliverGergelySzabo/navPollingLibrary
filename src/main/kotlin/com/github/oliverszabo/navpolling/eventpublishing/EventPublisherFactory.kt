@@ -67,10 +67,6 @@ class EventPublisherFactory(
             beanMethodPairsForDefaultFeed.map { createEventPublisher(it.first, it.second, mapper) }
         )
 
-        eventPublishersByInvoiceFeedClass.forEach{
-            println("${it.key.simpleName}: ${it.value.joinToString { it.toString() }}")
-        }
-
         this.eventPublishersByInvoiceFeedClass = eventPublishersByInvoiceFeedClass
         isRunning = true
     }

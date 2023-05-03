@@ -45,6 +45,10 @@ fun Instant.minusDays(daysToSubtract: Long): Instant {
     return plusDays(-daysToSubtract)
 }
 
+fun Instant.minusDays(daysToSubtract: Int): Instant {
+    return minusDays(daysToSubtract.toLong())
+}
+
 fun Instant.isTruncatedTo(unit: TemporalUnit): Boolean {
     return this == truncatedTo(unit)
 }

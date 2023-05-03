@@ -13,6 +13,22 @@ class InvoiceData(
     val completenessIndicator: Boolean,
     val invoiceMain: InvoiceMain
 ) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as InvoiceData
+        if (invoiceNumber != other.invoiceNumber) return false
+        if (invoiceMain.invoice.invoiceHead.supplierInfo.supplierTaxNumber != other.invoiceMain.invoice.invoiceHead.supplierInfo.supplierTaxNumber) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = invoiceNumber.hashCode()
+        result = 31 * result + invoiceMain.invoice.invoiceHead.supplierInfo.supplierTaxNumber.hashCode()
+        return result
+    }
+
     class InvoiceMain(
         val invoice: Invoice
     )
@@ -397,7 +413,20 @@ class InvoiceData(
 
         @field:JacksonXmlProperty(namespace = "base")
         val countyCode: String? = null
-    )
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as TaxNumber
+            if (taxpayerId != other.taxpayerId) return false
+            return true
+        }
+
+        override fun hashCode(): Int {
+            return taxpayerId.hashCode()
+        }
+    }
 
     class InvoiceDetail(
         val invoiceCategory: String,

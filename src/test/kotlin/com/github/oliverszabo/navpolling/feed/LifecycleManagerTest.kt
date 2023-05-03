@@ -59,13 +59,12 @@ class LifecycleManagerTest {
         every { librarySettings.shutdownTimeout } returns shutdownTimout
 
         every { eventPublisherFactory.getEventPublishers(any()) } returns emptyList()
-
-        //every { feeds[0].javaClass } returns Feed::class.java
     }
 
     @AfterEach
     fun afterEach() {
         manager = null
+        clearAllMocks()
     }
 
     @Test

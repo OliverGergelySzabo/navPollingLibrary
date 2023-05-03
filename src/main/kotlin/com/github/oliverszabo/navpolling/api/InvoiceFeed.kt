@@ -11,11 +11,11 @@ import javax.annotation.PostConstruct
 abstract class InvoiceFeed(
     pastFetchingPeriod: Int? = null
 ) {
-    private var pastFetchingPeriod: Int = pastFetchingPeriod ?: -1
+    private var pastFetchingPeriod: Int
 
     private var isRunning = AtomicBoolean(false)
     private var pollingCompleteUntil: Instant = Instant.now()
-    private val users: MutableSet<TechnicalUser> = mutableSetOf() //ConcurrentHashMap.newKeySet()
+    private val users: MutableSet<TechnicalUser> = mutableSetOf()
     private val newlyAddedTechnicalUserLogins: MutableSet<String> = mutableSetOf()
 
     @Autowired
@@ -133,7 +133,7 @@ abstract class InvoiceFeed(
     }
 
     //todo: make this class serializable?
-    class State internal constructor(
+    data class State internal constructor(
         val pollingCompleteUntil: Instant,
         val newlyAddedTechnicalUserLogins: Set<String>
     ) {
