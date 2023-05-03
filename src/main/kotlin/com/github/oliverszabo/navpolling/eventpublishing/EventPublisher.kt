@@ -3,6 +3,7 @@ package com.github.oliverszabo.navpolling.eventpublishing
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import com.github.oliverszabo.navpolling.api.TechnicalUser
+import com.github.oliverszabo.navpolling.api.annotation.InvoiceFieldMapping
 import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.model.InvoiceDigest
 import com.github.oliverszabo.navpolling.util.TypeUtils
@@ -28,6 +29,10 @@ class EventPublisher(
             = "Event handler methods must contain a custom (non-primitive) invoice type argument"
         const val EVENT_HANDLER_INVOICE_ARGUMENT_CANNOT_BE_SIMPLE_TYPE_ERROR_MESSAGE
             = "The invoice type argument of event handlers cannot be a primitive (or boxed) type nor any known standard library type with value semantics (e.g. LocalDate)"
+        const val INVOICE_FIELD_MAPPING_NO_PARAMS_SUPPLIED_ERROR_MESSAGE
+            = "One of the value and fieldName parameters of the @InvoiceFieldMapping annotation must be supplied"
+        const val INVOICE_FIELD_MAPPING_BOTH_PARAMS_SUPPLIED_ERROR_MESSAGE
+            = "Both the value and fieldName parameters of the @InvoiceFieldMapping annotation cannot be supplied at once"
     }
 
     private val eventHandlerMethodParameterTypes = eventHandlerMethod.parameterTypes
@@ -70,7 +75,7 @@ class EventPublisher(
             //todo: think about making this recursive
             invoiceFieldsByTargetFieldName = invoiceParameterType
                 .declaredFields
-                .associate { field -> Pair(field.name, invoiceFieldFactory.getInvoiceField(field.name, field)) }
+                .associate { field -> Pair(field.name, invoiceFieldFactory.getInvoiceField(getInvoiceFieldName(field), field)) }
             targetFieldsByName = invoiceParameterType.declaredFields.associateBy { it.name }
             isOnlyDigestDataRequired = invoiceFieldsByTargetFieldName.all { it.value is InvoiceDigestField }
         }
@@ -116,8 +121,19 @@ class EventPublisher(
         callEventHandler(invoiceParameterArgument, technicalUser, invoiceDirection)
     }
 
-    override fun toString(): String {
-        return "Event publisher for $eventHandlerMethod"
+    private fun getInvoiceFieldName(field: Field): String {
+        val mappingAnnotation = field.getAnnotation(InvoiceFieldMapping::class.java) ?: return field.name
+        if((mappingAnnotation.fieldName == "" && mappingAnnotation.value == "")) {
+            throw IllegalArgumentException(INVOICE_FIELD_MAPPING_NO_PARAMS_SUPPLIED_ERROR_MESSAGE)
+        }
+        if(mappingAnnotation.fieldName != "" && mappingAnnotation.value != "" && mappingAnnotation.fieldName != mappingAnnotation.value) {
+            throw IllegalArgumentException(INVOICE_FIELD_MAPPING_BOTH_PARAMS_SUPPLIED_ERROR_MESSAGE)
+        }
+        return if(mappingAnnotation.fieldName != "") {
+            mappingAnnotation.fieldName
+        } else {
+            mappingAnnotation.value
+        }
     }
 
     private fun createInvoiceParameterArgument(valuesByTargetFieldName: Map<String, Any?>): Any {

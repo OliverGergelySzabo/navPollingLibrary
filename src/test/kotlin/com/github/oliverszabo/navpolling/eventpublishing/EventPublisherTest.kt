@@ -2,6 +2,7 @@ package com.github.oliverszabo.navpolling.eventpublishing
 
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import com.github.oliverszabo.navpolling.api.TechnicalUser
+import com.github.oliverszabo.navpolling.api.annotation.InvoiceFieldMapping
 import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.model.InvoiceDigest
 import com.github.oliverszabo.navpolling.util.assertThrownException
@@ -95,6 +96,24 @@ class EventPublisherTest {
     }
 
     @Test
+    fun constructorThrowsExceptionWhenInvoiceFieldMappingAnnotationFoundWithInvalidParameters() {
+        class NoParamsSupplied(
+            @InvoiceFieldMapping
+            val asd: String
+        )
+        class BothParamsSupplied(
+            @InvoiceFieldMapping("invoiceNumber", fieldName = "insDate")
+            val asd: String
+        )
+
+        every { eventHandlerMethod.parameterTypes } returns arrayOf(NoParamsSupplied::class.java)
+        createEventPublisherAndAssertThrownException(EventPublisher.INVOICE_FIELD_MAPPING_NO_PARAMS_SUPPLIED_ERROR_MESSAGE)
+
+        every { eventHandlerMethod.parameterTypes } returns arrayOf(BothParamsSupplied::class.java)
+        createEventPublisherAndAssertThrownException(EventPublisher.INVOICE_FIELD_MAPPING_BOTH_PARAMS_SUPPLIED_ERROR_MESSAGE)
+    }
+
+    @Test
     fun publishInvoiceArrivedEventInvokesEventHandlerWithTheCorrectArguments() {
         class OnlyInvoiceDigestFields(
             val invoiceNumber: String,
@@ -133,8 +152,21 @@ class EventPublisherTest {
 
             //widening conversions
             val batchIndex: BigDecimal,
-
         )
+        class Mappings(
+            @InvoiceFieldMapping("invoiceNumber")
+            val num: String,
+            @InvoiceFieldMapping("supplierTaxNumber")
+            val taxId: String,
+            @InvoiceFieldMapping(value =  "insDate", fieldName = "insDate")
+            val insertedAt: Instant
+        )
+        class BeanLike {
+            var invoiceNumber: String? = null
+            var supplierTaxNumber: String = ""
+            var customerTaxNumber: InvoiceData.CustomerTaxNumber? = null
+            var insDate: Instant? = null
+        }
 
         val capturedEventHandlerObject = slot<Any>()
         val capturedInvoice = slot<Any>()
@@ -233,6 +265,47 @@ class EventPublisherTest {
                 invoiceGrossAmount = 23622,
                 batchIndex = invoiceDigest.batchIndex!!.toBigDecimal()
             ),
+            technicalUser,
+            InvoiceDirection.OUTBOUND,
+            capturedInvoice,
+            capturedTechnicalUser,
+            capturedInvoiceDirection
+        )
+
+        every { eventHandlerMethod.parameterTypes } returns arrayOf(
+            Mappings::class.java,
+            TechnicalUser::class.java,
+            InvoiceDirection::class.java
+        )
+        createEventPublisher().publishInvoiceArrivedEvent(invoiceData, invoiceDigest, technicalUser, InvoiceDirection.OUTBOUND)
+        assertEventHandlerCalledEventHandlerObject(capturedEventHandlerObject)
+        assertEventHandlerArguments(
+            Mappings(
+                num = invoiceDigest.invoiceNumber,
+                taxId = invoiceDigest.supplierTaxNumber,
+                insertedAt = invoiceDigest.insDate,
+            ),
+            technicalUser,
+            InvoiceDirection.OUTBOUND,
+            capturedInvoice,
+            capturedTechnicalUser,
+            capturedInvoiceDirection
+        )
+
+        every { eventHandlerMethod.parameterTypes } returns arrayOf(
+            BeanLike::class.java,
+            TechnicalUser::class.java,
+            InvoiceDirection::class.java
+        )
+        createEventPublisher().publishInvoiceArrivedEvent(invoiceData, invoiceDigest, technicalUser, InvoiceDirection.OUTBOUND)
+        assertEventHandlerCalledEventHandlerObject(capturedEventHandlerObject)
+        assertEventHandlerArguments(
+            BeanLike().apply {
+                invoiceNumber = invoiceDigest.invoiceNumber
+                supplierTaxNumber = invoiceDigest.supplierTaxNumber
+                customerTaxNumber = InvoiceData.CustomerTaxNumber("99887764", "2", "02")
+                insDate = invoiceDigest.insDate
+            },
             technicalUser,
             InvoiceDirection.OUTBOUND,
             capturedInvoice,
