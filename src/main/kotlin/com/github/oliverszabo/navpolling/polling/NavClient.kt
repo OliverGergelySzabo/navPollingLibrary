@@ -1,8 +1,8 @@
-package com.github.oliverszabo.navpolling.communication
+package com.github.oliverszabo.navpolling.polling
 
 import com.github.oliverszabo.navpolling.api.exception.NavInvoiceServiceConnectionException
 import com.github.oliverszabo.navpolling.api.exception.NavQueryException
-import com.github.oliverszabo.navpolling.communication.dto.*
+import com.github.oliverszabo.navpolling.polling.dto.*
 import com.github.oliverszabo.navpolling.util.createXmlMapper
 import kotlinx.coroutines.future.await
 import java.net.SocketException
@@ -10,12 +10,7 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse.BodyHandlers
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
 import java.time.Duration
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
 
 class NavClient {
     companion object{
@@ -30,7 +25,7 @@ class NavClient {
         .version(HttpClient.Version.HTTP_2)
         .build()
 
-    suspend fun <T: RequestBase, R> query(request: T, resultClass: Class<R>): R {
+    suspend fun <T: NavRequest, R> query(request: T, resultClass: Class<R>): R {
         val httpRequest = HttpRequest.newBuilder()
             .uri(URI.create("$PROD_API_URL/${request.command}"))
             .timeout(Duration.ofSeconds(5))

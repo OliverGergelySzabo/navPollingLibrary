@@ -1,4 +1,4 @@
-package com.github.oliverszabo.navpolling.communication.dto
+package com.github.oliverszabo.navpolling.polling.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonPropertyOrder
@@ -18,7 +18,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
-abstract class RequestBase(val config: Config) {
+abstract class NavRequest(val config: Config) {
     companion object {
         private const val API_NS = "http://schemas.nav.gov.hu/OSA/3.0/api"
         private const val COMMON_NS = "http://schemas.nav.gov.hu/NTCA/1.0/common"

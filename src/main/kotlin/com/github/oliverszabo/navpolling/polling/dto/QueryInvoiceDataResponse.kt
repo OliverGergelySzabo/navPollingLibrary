@@ -1,4 +1,4 @@
-package com.github.oliverszabo.navpolling.communication.dto
+package com.github.oliverszabo.navpolling.polling.dto
 
 import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.util.createXmlMapper

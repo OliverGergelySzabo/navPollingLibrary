@@ -1,9 +1,10 @@
-package com.github.oliverszabo.navpolling.feed
+package com.github.oliverszabo.navpolling
 
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
-import com.github.oliverszabo.navpolling.communication.NavQueryService
+import com.github.oliverszabo.navpolling.polling.NavQueryService
 import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.eventpublishing.EventPublisherFactory
+import com.github.oliverszabo.navpolling.polling.InvoiceFeedPoller
 import org.slf4j.LoggerFactory
 import org.springframework.context.SmartLifecycle
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler

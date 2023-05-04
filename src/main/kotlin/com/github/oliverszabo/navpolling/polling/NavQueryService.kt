@@ -1,8 +1,8 @@
-package com.github.oliverszabo.navpolling.communication
+package com.github.oliverszabo.navpolling.polling
 
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import com.github.oliverszabo.navpolling.api.TechnicalUser
-import com.github.oliverszabo.navpolling.communication.dto.*
+import com.github.oliverszabo.navpolling.polling.dto.*
 import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.model.InvoiceDigest

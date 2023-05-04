@@ -1,11 +1,10 @@
-package com.github.oliverszabo.navpolling.feed
+package com.github.oliverszabo.navpolling.polling
 
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
 import com.github.oliverszabo.navpolling.api.TechnicalUser
 import com.github.oliverszabo.navpolling.api.exception.NavInvoiceServiceConnectionException
 import com.github.oliverszabo.navpolling.api.exception.NavQueryException
-import com.github.oliverszabo.navpolling.communication.NavQueryService
 import com.github.oliverszabo.navpolling.eventpublishing.EventPublisher
 import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.model.InvoiceDigest

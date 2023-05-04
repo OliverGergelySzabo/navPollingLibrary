@@ -1,10 +1,9 @@
-package com.github.oliverszabo.navpolling.communication.dto
+package com.github.oliverszabo.navpolling.polling.dto
 
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import java.time.Instant
 import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 
 class QueryInvoiceDigestRequest(
     config: Config,
@@ -15,7 +14,7 @@ class QueryInvoiceDigestRequest(
     val paymentMethod: PaymentMethod? = null,
     val currency: String? = null,
     val minPaymentDeadline: LocalDate? = null
-): RequestBase(config) {
+): NavRequest(config) {
     private data class DateInterval(
         val dateFrom : String,
         val dateTo: String

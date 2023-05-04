@@ -1,10 +1,9 @@
-package com.github.oliverszabo.navpolling.communication
+package com.github.oliverszabo.navpolling.polling
 
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import com.github.oliverszabo.navpolling.api.TechnicalUser
-import com.github.oliverszabo.navpolling.communication.dto.NavTechnicalUser
-import com.github.oliverszabo.navpolling.communication.dto.QueryInvoiceDigestRequest
-import com.github.oliverszabo.navpolling.communication.dto.QueryInvoiceDigestResponse
+import com.github.oliverszabo.navpolling.polling.dto.QueryInvoiceDigestRequest
+import com.github.oliverszabo.navpolling.polling.dto.QueryInvoiceDigestResponse
 import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.model.InvoiceDigest
 import com.github.oliverszabo.navpolling.util.assertListsContainSameElements
@@ -16,7 +15,6 @@ import io.mockk.mockk
 import io.mockk.mockkConstructor
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.assertThrows
 import java.time.Instant
 import java.time.LocalDate

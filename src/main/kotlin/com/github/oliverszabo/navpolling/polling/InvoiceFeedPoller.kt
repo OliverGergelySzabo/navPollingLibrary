@@ -1,11 +1,9 @@
-package com.github.oliverszabo.navpolling.feed
+package com.github.oliverszabo.navpolling.polling
 
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
 import com.github.oliverszabo.navpolling.api.TechnicalUser
 import com.github.oliverszabo.navpolling.api.exception.NavInvoiceServiceConnectionException
 import com.github.oliverszabo.navpolling.api.exception.NavQueryException
-import com.github.oliverszabo.navpolling.communication.NavQueryService
-import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.eventpublishing.EventPublisher
 import com.github.oliverszabo.navpolling.util.minusDays
 import org.slf4j.LoggerFactory

@@ -1,4 +1,4 @@
-package com.github.oliverszabo.navpolling.communication.dto
+package com.github.oliverszabo.navpolling.polling.dto
 
 data class Software(
     val softwareId : String,

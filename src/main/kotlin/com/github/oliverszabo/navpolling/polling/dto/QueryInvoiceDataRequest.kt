@@ -1,4 +1,4 @@
-package com.github.oliverszabo.navpolling.communication.dto
+package com.github.oliverszabo.navpolling.polling.dto
 
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
@@ -8,7 +8,7 @@ class QueryInvoiceDataRequest(
     val invoiceNumber: String,
     val invoiceDirection: InvoiceDirection,
     val supplierTaxNumber: String? = null
-): RequestBase(config) {
+): NavRequest(config) {
     private data class InvoiceNumberQuery(
         val invoiceNumber : String,
         val invoiceDirection : InvoiceDirection,

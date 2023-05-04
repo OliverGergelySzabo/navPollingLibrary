@@ -1,4 +1,4 @@
-package com.github.oliverszabo.navpolling.communication.dto
+package com.github.oliverszabo.navpolling.polling.dto
 
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 

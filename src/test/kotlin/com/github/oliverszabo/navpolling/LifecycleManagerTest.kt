@@ -1,9 +1,10 @@
-package com.github.oliverszabo.navpolling.feed
+package com.github.oliverszabo.navpolling
 
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
-import com.github.oliverszabo.navpolling.communication.NavQueryService
+import com.github.oliverszabo.navpolling.polling.NavQueryService
 import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.eventpublishing.EventPublisherFactory
+import com.github.oliverszabo.navpolling.polling.InvoiceFeedPoller
 import io.mockk.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
