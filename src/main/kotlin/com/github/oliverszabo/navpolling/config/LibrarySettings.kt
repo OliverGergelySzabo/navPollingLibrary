@@ -26,7 +26,7 @@ class LibrarySettings(
     val connectionPoolSize: Int = initializeThreadPoolSize(PropertyNames.CONNECTION_POOL_SIZE, DefaultValues.connectionPoolSize)
     val pollingFrequency: Trigger = initializePollingFrequency()
     val defaultPastFetchingPeriod: Int = initializeDefaultPastFetchingPeriod()
-    val shutdownTimeout: Long = initializeShutdownTimeout()
+    val shutdownTimeout: Int = initializeShutdownTimeout()
 
     private fun initializePollingFrequency(): Trigger {
         val specifiedPollingFrequency = environment.getProperty(PropertyNames.POLLING_FREQUENCY)
@@ -81,8 +81,8 @@ class LibrarySettings(
         return specifiedPoolSize
     }
 
-    private fun initializeShutdownTimeout(): Long {
-        val specifiedShutdownTimeout = environment.getProperty<Long?>(PropertyNames.SHUTDOWN_TIMEOUT) ?: DefaultValues.shutdownTimeout
+    private fun initializeShutdownTimeout(): Int {
+        val specifiedShutdownTimeout = environment.getProperty<Int?>(PropertyNames.SHUTDOWN_TIMEOUT) ?: DefaultValues.shutdownTimeout
         if(specifiedShutdownTimeout < 0) {
             throw NavPollingLibraryInitializationException(
                 ErrorMessages.propertyMustBeGreaterThanOrEqualTo(PropertyNames.SHUTDOWN_TIMEOUT, 0)
@@ -106,7 +106,7 @@ class LibrarySettings(
             const val connectionPoolSize = 10
             val pollingFrequency = PeriodicTrigger(1, TimeUnit.DAYS)
             const val defaultPastFetchingPeriod = 0
-            const val shutdownTimeout = 10L
+            const val shutdownTimeout = 10
         }
     }
 }

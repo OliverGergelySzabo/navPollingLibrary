@@ -9,7 +9,7 @@ import org.springframework.context.SmartLifecycle
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import org.springframework.stereotype.Component
 import java.lang.Integer.max
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.ScheduledFuture
 
 @Component
 class LifecycleManager(
@@ -22,6 +22,8 @@ class LifecycleManager(
         private val log = LoggerFactory.getLogger(LifecycleManager::class.java)
         const val START_MESSAGE_TEMPLATE = "NAV invoice polling started for %d feed(s)"
         const val STOP_MESSAGE_TEMPLATE = "Stopping NAV invoice polling for %d feed(s) (maximum timeout: %ds)"
+        const val TIMEOUT_REACHED_MESSAGE_TEMPLATE = "Timeout reached while waiting for ongoing polling to finish " +
+                "(this can cause duplicate invoice arrived events for some feeds when the application is restarted)"
         const val POLLING_POOL_THREAD_NAME_PREFIX = "NavPollingLibraryPool"
         const val ADDITIONAL_TIMEOUT = 1L
     }
@@ -29,17 +31,22 @@ class LifecycleManager(
     private val pollingScheduler = ThreadPoolTaskScheduler().apply {
         poolSize = max(1, invoiceFeeds.size.coerceAtMost(librarySettings.pollingPoolSize))
         threadNamePrefix = POLLING_POOL_THREAD_NAME_PREFIX
+        setAwaitTerminationSeconds(librarySettings.shutdownTimeout)
+        setWaitForTasksToCompleteOnShutdown(true)
         initialize()
     }
     private var isRunning: Boolean = false
+    private val scheduledPollingTasks = mutableListOf<ScheduledFuture<*>>()
 
     @Synchronized
     override fun start() {
         invoiceFeeds.forEach { feed ->
             feed.init()
-            pollingScheduler.schedule(
-                InvoiceFeedPoller(feed, eventPublisherFactory.getEventPublishers(feed.javaClass), navQueryService),
-                librarySettings.pollingFrequency
+            scheduledPollingTasks.add(
+                pollingScheduler.schedule(
+                    InvoiceFeedPoller(feed, eventPublisherFactory.getEventPublishers(feed.javaClass), navQueryService),
+                    librarySettings.pollingFrequency
+                )!!
             )
         }
         isRunning = true
@@ -49,7 +56,7 @@ class LifecycleManager(
     @Synchronized
     override fun stop() {
         log.info(STOP_MESSAGE_TEMPLATE.format(invoiceFeeds.size, librarySettings.shutdownTimeout))
-        stopPollingScheduler()
+        stopScheduledTasks()
         invoiceFeeds.forEach { it.destroy() }
         isRunning = false
     }
@@ -59,13 +66,12 @@ class LifecycleManager(
         return isRunning
     }
 
-    private fun stopPollingScheduler() {
-        val executor = pollingScheduler.scheduledExecutor
-        executor.shutdown()
-        //todo: this never shuts down before termination, this has to be investigated
-        executor.awaitTermination(librarySettings.shutdownTimeout, TimeUnit.SECONDS)
-        executor.shutdownNow()
-        // wait for an additional second so all jobs are interrupted properly before returning
-        executor.awaitTermination(ADDITIONAL_TIMEOUT, TimeUnit.SECONDS)
+    private fun stopScheduledTasks() {
+        scheduledPollingTasks.forEach { it.cancel(false) }
+        val shutDownStart = System.currentTimeMillis()
+        pollingScheduler.shutdown()
+        if(System.currentTimeMillis() - shutDownStart > (librarySettings.shutdownTimeout * 1000)) {
+            log.warn(TIMEOUT_REACHED_MESSAGE_TEMPLATE)
+        }
     }
 }

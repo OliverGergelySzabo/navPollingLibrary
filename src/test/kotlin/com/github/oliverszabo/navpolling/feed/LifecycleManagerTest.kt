@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.scheduling.Trigger
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import org.springframework.scheduling.support.PeriodicTrigger
-import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -29,9 +29,9 @@ class LifecycleManagerTest {
     private val eventPublisherFactory = mockk<EventPublisherFactory>(relaxed = true)
     private val logger = mockk<Logger>(relaxed = true)
     private val trigger = PeriodicTrigger(1, TimeUnit.DAYS)
-    private val executor = mockk<ScheduledExecutorService>(relaxed = true)
+    private val scheduledFuture = mockk<ScheduledFuture<*>>(relaxed = true)
 
-    private val shutdownTimout = 10L
+    private val shutdownTimout = 10
 
     private var manager: LifecycleManager? = null
 
@@ -39,13 +39,9 @@ class LifecycleManagerTest {
     fun beforeEach() {
         mockkConstructor(ThreadPoolTaskScheduler::class)
         every { anyConstructed<ThreadPoolTaskScheduler>().initialize() } returns Unit
-        every { anyConstructed<ThreadPoolTaskScheduler>().schedule(any(), any<Trigger>()) } returns mockk(relaxed = true)
+        every { anyConstructed<ThreadPoolTaskScheduler>().schedule(any(), any<Trigger>()) } returns scheduledFuture
         every { anyConstructed<ThreadPoolTaskScheduler>().getPoolSize() } returns 100
-        every { anyConstructed<ThreadPoolTaskScheduler>().scheduledExecutor } returns executor
-
-        every { executor.shutdown() } returns Unit
-        every { executor.shutdownNow() } returns emptyList()
-        every { executor.awaitTermination(any(), any()) } returns true
+        every { anyConstructed<ThreadPoolTaskScheduler>().shutdown() } returns Unit
 
         mockkConstructor(InvoiceFeedPoller::class)
 
@@ -59,6 +55,7 @@ class LifecycleManagerTest {
         every { librarySettings.shutdownTimeout } returns shutdownTimout
 
         every { eventPublisherFactory.getEventPublishers(any()) } returns emptyList()
+        every { scheduledFuture.cancel(any()) } returns true
     }
 
     @AfterEach
@@ -106,13 +103,17 @@ class LifecycleManagerTest {
 
         assertEquals(feeds.size, createdPollers.size)
         feeds.forEach { feed ->
-            verify(exactly = 1) {
+            verifyOrder {
                 feed.init()
                 eventPublisherFactory.getEventPublishers(eq(feed.javaClass))
             }
             val poller = createdPollers.find { it.invoiceFeed == feed }
             assertNotNull(poller)
             createdPollers.remove(poller)
+        }
+        assertEquals(feeds.size, createdTriggers.size)
+        createdTriggers.forEach {
+            assertEquals(trigger, it)
         }
         verify(exactly = feeds.size) {
             anyConstructed<ThreadPoolTaskScheduler>().schedule(any<InvoiceFeedPoller>(), any<Trigger>())
@@ -127,14 +128,15 @@ class LifecycleManagerTest {
         manager!!.start()
         manager!!.stop()
 
-        verify(exactly = 1) {
-            executor.shutdown()
-            executor.shutdownNow()
-            executor.awaitTermination(eq(shutdownTimout), eq(TimeUnit.SECONDS))
-            executor.awaitTermination(eq(LifecycleManager.ADDITIONAL_TIMEOUT), eq(TimeUnit.SECONDS))
-        }
-        feeds.forEach {
-            verify(exactly = 1) { it.destroy() }
+        verifyOrder {
+            logger.info(eq(LifecycleManager.STOP_MESSAGE_TEMPLATE.format(feeds.size, shutdownTimout)))
+            feeds.forEach {
+                scheduledFuture.cancel(eq(false))
+            }
+            anyConstructed<ThreadPoolTaskScheduler>().shutdown()
+            feeds.forEach {
+                it.destroy()
+            }
         }
         assertFalse(manager!!.isRunning)
     }

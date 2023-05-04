@@ -19,7 +19,6 @@ class LibrarySettingsTest {
     @BeforeEach
     fun beforeEach() {
         every { environment.getProperty<Int?>(any(), any()) } returns null
-        every { environment.getProperty<Long?>(any(), any()) } returns null
         every { environment.getProperty(any()) } returns null
     }
 
@@ -183,14 +182,14 @@ class LibrarySettingsTest {
     @Test
     fun ifShutdownTimeoutIsSpecifiedThenTheCorrectValueIsReturned() {
         val expectedTimeout = LibrarySettings.DefaultValues.shutdownTimeout + 5
-        every { environment.getProperty<Long?>(LibrarySettings.PropertyNames.SHUTDOWN_TIMEOUT, any()) } returns expectedTimeout
+        every { environment.getProperty<Int?>(LibrarySettings.PropertyNames.SHUTDOWN_TIMEOUT, any()) } returns expectedTimeout
         val settings = createLibrarySettings()
         assertEquals(expectedTimeout, settings.shutdownTimeout)
     }
 
     @Test
     fun ifShutdownTimeoutBelowZeroIsSpecifiedThenTheCorrectErrorIsReturned() {
-        every { environment.getProperty<Long?>(LibrarySettings.PropertyNames.SHUTDOWN_TIMEOUT, any()) } returns -1
+        every { environment.getProperty<Int?>(LibrarySettings.PropertyNames.SHUTDOWN_TIMEOUT, any()) } returns -1
         createLibrarySettingsAndAssertException(
             ErrorMessages.propertyMustBeGreaterThanOrEqualTo(LibrarySettings.PropertyNames.SHUTDOWN_TIMEOUT, 0)
         )

@@ -66,7 +66,6 @@ class NavClient {
             }
             return xmlMapper.readValue(httpResponse.body(), resultClass)
         } catch (e: SocketException) {
-            //in case NAV service is not available or other connection errors
             throw NavInvoiceServiceConnectionException(e)
         }
     }
