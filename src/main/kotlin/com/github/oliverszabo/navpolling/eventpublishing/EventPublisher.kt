@@ -72,7 +72,7 @@ class EventPublisher(
             targetFieldsByName = emptyMap()
             isOnlyDigestDataRequired = invoiceParameterType == InvoiceDigest::class.java
         } else {
-            //todo: think about making this recursive
+            //todo: think about making this recursive (make issue)
             invoiceFieldsByTargetFieldName = invoiceParameterType
                 .declaredFields
                 .associate { field -> Pair(field.name, invoiceFieldFactory.getInvoiceField(getInvoiceFieldName(field), field)) }
@@ -137,6 +137,7 @@ class EventPublisher(
     }
 
     private fun createInvoiceParameterArgument(valuesByTargetFieldName: Map<String, Any?>): Any {
+        //todo: maybe exception translation would be useful here?
         return xmlMapper.readValue(
             xmlMapper.writeValueAsString(valuesByTargetFieldName),
             invoiceParameterType

@@ -90,8 +90,6 @@ class NavQueryService(
                 .flatten()
                 // removing invoices on the upper bound, as this function has an exclusive upper bound
                 // while the NAV API has an inclusive upper bound
-                //todo: decide whether additional measures are needed
-                // (i.e. extend invoice state with potential duplicates and make this functions 'to' param inclusive
                 .filter { (digest, _, _) -> digest.insDate != to }
                 // removing potential duplicates caused by overlapping boundaries
                 .distinctBy { (digest, _, _) -> digest }

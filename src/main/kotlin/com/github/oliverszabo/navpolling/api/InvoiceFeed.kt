@@ -132,7 +132,6 @@ abstract class InvoiceFeed(
         pollingCompleteUntil = newValue
     }
 
-    //todo: make this class serializable?
     data class State internal constructor(
         val pollingCompleteUntil: Instant,
         val newlyAddedTechnicalUserLogins: Set<String>
