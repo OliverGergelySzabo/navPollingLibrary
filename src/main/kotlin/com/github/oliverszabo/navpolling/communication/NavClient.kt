@@ -23,30 +23,11 @@ class NavClient {
         private const val PROD_API_URL = "https://api.onlineszamla.nav.gov.hu/invoiceService/v3"
 
         private val xmlMapper = createXmlMapper()
-        //todo: implement nav cert checking
-        private val navTrustManager = arrayOf<TrustManager>(
-            object: X509TrustManager {
-                override fun getAcceptedIssuers(): Array<X509Certificate> {
-                    return arrayOf()
-                }
-
-                override fun checkClientTrusted(
-                    certs: Array<X509Certificate>, authType: String
-                ) {
-                }
-
-                override fun checkServerTrusted(
-                    certs: Array<X509Certificate>, authType: String
-                ) {
-                }
-            }
-        )
     }
 
     private val httpClient: HttpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(5))
         .version(HttpClient.Version.HTTP_2)
-        .sslContext(SSLContext.getInstance("SSL").apply { init(null, navTrustManager, SecureRandom()) })
         .build()
 
     suspend fun <T: RequestBase, R> query(request: T, resultClass: Class<R>): R {
