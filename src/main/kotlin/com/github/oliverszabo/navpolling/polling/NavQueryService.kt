@@ -34,13 +34,12 @@ class NavQueryService(
 
     fun fetchInvoiceDigestsAndData(
         technicalUsers: Set<TechnicalUser>,
-        from: Instant,
         to: Instant
     ): List<QueryResult> {
         return runBlocking {
             //todo: make this optionally obey nav rate limiting rules
             val client = NavClient()
-            return@runBlocking fetchInvoiceDigests(technicalUsers, from, to).map { (invoiceDigest, technicalUser, direction) ->
+            return@runBlocking fetchInvoiceDigests(technicalUsers, to).map { (invoiceDigest, technicalUser, direction) ->
                 connectionScope.async {
                     QueryResult(
                         fetchInvoiceData(client, NavTechnicalUser.from(technicalUser), invoiceDigest, direction),
@@ -55,32 +54,25 @@ class NavQueryService(
 
     fun fetchInvoiceDigests(
         technicalUsers: Set<TechnicalUser>,
-        from: Instant,
         to: Instant
     ): List<DigestQueryResult> {
-        if(from > to) {
-            throw IllegalArgumentException("The 'from' param cannot be after the 'to' param")
+        if(technicalUsers.any { it.pollingCompleteUntil == null || it.pollingCompleteUntil > to }) {
+            throw IllegalArgumentException("The 'pollingCompleteUntil' field of all given technical users must be before the 'to' param")
         }
-        if(!from.isTruncatedTo(ChronoUnit.SECONDS) || !to.isTruncatedTo(ChronoUnit.SECONDS)) {
-            throw IllegalArgumentException("The 'from' and 'to' params must be truncated to seconds")
+        if(technicalUsers.any { it.pollingCompleteUntil?.isTruncatedTo(ChronoUnit.SECONDS) == false }
+            || !to.isTruncatedTo(ChronoUnit.SECONDS)) {
+            throw IllegalArgumentException("The 'to' param and the 'pollingCompleteUntil' field of all given technical users must be truncated to seconds")
         }
 
         val client = NavClient()
-        val bounds = mutableListOf<Pair<Instant, Instant>>()
-        var currentBoundFrom = from
-        do {
-            val currentBoundTo = minOf(to, currentBoundFrom.plusDays(MAX_NUMBER_OF_DAYS_IN_REQUEST))
-            bounds.add(Pair(currentBoundFrom, currentBoundTo))
-            currentBoundFrom = currentBoundTo
-        } while (to > currentBoundTo)
 
         return runBlocking {
-            return@runBlocking technicalUsers.flatMap { technicalUser ->
-                bounds.flatMap { (from, to) ->
-                    technicalUser.pollingDirections.map { direction ->
+            return@runBlocking technicalUsers.flatMap { user ->
+                createBounds(user.pollingCompleteUntil!!, to).flatMap { (from, to) ->
+                    user.pollingDirections.map { direction ->
                         connectionScope.async {
-                            fetchInvoiceDigestsForPeriod(client, NavTechnicalUser.from(technicalUser), direction, from, to).map {
-                                DigestQueryResult(it, technicalUser, direction)
+                            fetchInvoiceDigestsForPeriod(client, NavTechnicalUser.from(user), direction, from, to).map {
+                                DigestQueryResult(it, user, direction)
                             }
                         }
                     }
@@ -94,6 +86,17 @@ class NavQueryService(
                 // removing potential duplicates caused by overlapping boundaries
                 .distinctBy { (digest, _, _) -> digest }
         }
+    }
+
+    private fun createBounds(from: Instant, to: Instant): List<Pair<Instant, Instant>> {
+        val bounds = mutableListOf<Pair<Instant, Instant>>()
+        var currentBoundFrom = from
+        do {
+            val currentBoundTo = minOf(to, currentBoundFrom.plusDays(MAX_NUMBER_OF_DAYS_IN_REQUEST))
+            bounds.add(Pair(currentBoundFrom, currentBoundTo))
+            currentBoundFrom = currentBoundTo
+        } while (to > currentBoundTo)
+        return bounds
     }
 
     private suspend fun fetchInvoiceDigestsForPeriod(

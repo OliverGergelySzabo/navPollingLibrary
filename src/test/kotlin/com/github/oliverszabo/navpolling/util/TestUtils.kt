@@ -13,6 +13,10 @@ fun <E, A> assertListsContainSameElements(expectedList: List<E>, actualList: Lis
     }
 }
 
+fun <E, A> assertSetsContainSameElements(expectedSet: Set<E>, actualSet: Set<A>, comparator: (E, A) -> Boolean) {
+    assertListsContainSameElements(expectedSet.toList(), actualSet.toList(), comparator)
+}
+
 inline fun <reified T: Throwable>assertThrownException(expectedMessage: String, executable: () -> Unit) {
     val exception: T = assertThrows(executable)
     assertEquals(expectedMessage, exception.message)

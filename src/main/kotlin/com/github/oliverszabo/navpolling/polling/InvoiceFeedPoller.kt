@@ -1,19 +1,17 @@
 package com.github.oliverszabo.navpolling.polling
 
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
-import com.github.oliverszabo.navpolling.api.TechnicalUser
 import com.github.oliverszabo.navpolling.api.exception.NavInvoiceServiceConnectionException
 import com.github.oliverszabo.navpolling.api.exception.NavQueryException
 import com.github.oliverszabo.navpolling.eventpublishing.EventPublisher
-import com.github.oliverszabo.navpolling.util.minusDays
+import com.github.oliverszabo.navpolling.util.CurrentTimeProvider
 import org.slf4j.LoggerFactory
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 class InvoiceFeedPoller(
     val invoiceFeed: InvoiceFeed,
     private val eventPublishers: List<EventPublisher>,
     private val navQueryService: NavQueryService,
+    private val currentTimeProvider: CurrentTimeProvider,
 ): Runnable {
     companion object {
         const val POLLING_ERROR_START = "An error occurred during polling: "
@@ -30,13 +28,23 @@ class InvoiceFeedPoller(
 
     override fun run() {
         if(!invoiceFeed.isRunning()) return
-        val to = Instant.now().truncatedTo(ChronoUnit.SECONDS)
+        val to = currentTimeProvider.currentSecond()
         try {
-            fetchAndPublishInvoices(invoiceFeed.getUsers(false), invoiceFeed.getPollingCompleteUntil().truncatedTo(ChronoUnit.SECONDS), to)
-            val userWithPastFetchingRequired = invoiceFeed.getUsers(true)
-            fetchAndPublishInvoices(userWithPastFetchingRequired, to.minusDays(invoiceFeed.getPastFetchingPeriod()), to)
-            invoiceFeed.onPastFetchingCompleted(userWithPastFetchingRequired)
-            invoiceFeed.setPollingCompleteUntil(to)
+            val users = invoiceFeed.getUsers()
+            if(isOnlyDigestDataRequired) {
+                navQueryService.fetchInvoiceDigests(users, to).forEach { (digest, user, direction) ->
+                    eventPublishers.forEach {
+                        it.publishInvoiceArrivedEvent(digest, user, direction)
+                    }
+                }
+            } else {
+                navQueryService.fetchInvoiceDigestsAndData(users, to).forEach { (data, digest, user, direction) ->
+                    eventPublishers.forEach {
+                        it.publishInvoiceArrivedEvent(data, digest, user, direction)
+                    }
+                }
+            }
+            invoiceFeed.compareAndSetPollingCompleteUntilForUsers(users, to)
         } catch (e: NavInvoiceServiceConnectionException) {
             log.error(NAV_CONNECTION_ERROR_MESSAGE_TEMPLATE.format(e.cause!!::class.java.canonicalName, e.cause!!.message))
         } catch (e: NavQueryException) {
@@ -44,22 +52,6 @@ class InvoiceFeedPoller(
         } catch (e: InterruptedException) {
             log.warn(POLLING_INTERRUPTED_MESSAGE_TEMPLATE.format(invoiceFeed::class.java.canonicalName))
             Thread.currentThread().interrupt()
-        }
-    }
-
-    private fun fetchAndPublishInvoices(users: Set<TechnicalUser>, from: Instant, to: Instant) {
-        if(isOnlyDigestDataRequired) {
-            navQueryService.fetchInvoiceDigests(users, from, to).forEach { (digest, user, direction) ->
-                eventPublishers.forEach {
-                    it.publishInvoiceArrivedEvent(digest, user, direction)
-                }
-            }
-        } else {
-            navQueryService.fetchInvoiceDigestsAndData(users, from, to).forEach { (data, digest, user, direction) ->
-                eventPublishers.forEach {
-                    it.publishInvoiceArrivedEvent(data, digest, user, direction)
-                }
-            }
         }
     }
 }

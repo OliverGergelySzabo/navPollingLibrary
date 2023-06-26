@@ -5,7 +5,9 @@ import com.github.oliverszabo.navpolling.polling.NavQueryService
 import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.eventpublishing.EventPublisherFactory
 import com.github.oliverszabo.navpolling.polling.InvoiceFeedPoller
+import com.github.oliverszabo.navpolling.util.CurrentTimeProvider
 import io.mockk.*
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.*
@@ -28,6 +30,8 @@ class LifecycleManagerTest {
     private val librarySettings = mockk<LibrarySettings>(relaxed = true)
     private val navQueryService = mockk<NavQueryService>(relaxed = true)
     private val eventPublisherFactory = mockk<EventPublisherFactory>(relaxed = true)
+    private val currentTimeProvider = mockk<CurrentTimeProvider>(relaxed = true)
+
     private val logger = mockk<Logger>(relaxed = true)
     private val trigger = PeriodicTrigger(1, TimeUnit.DAYS)
     private val scheduledFuture = mockk<ScheduledFuture<*>>(relaxed = true)
@@ -63,6 +67,13 @@ class LifecycleManagerTest {
     fun afterEach() {
         manager = null
         clearAllMocks()
+    }
+
+    @AfterAll
+    fun afterAll() {
+        //for some reason this call is needed for the invoiceFeedPollerTest mockkStatic(LoggerFactory::class) to work
+        //todo find out why
+        unmockkStatic(LoggerFactory::class)
     }
 
     @Test
@@ -143,6 +154,6 @@ class LifecycleManagerTest {
     }
 
     private fun createLifeCycleManager() {
-        manager = LifecycleManager(feeds, librarySettings, navQueryService, eventPublisherFactory)
+        manager = LifecycleManager(feeds, librarySettings, navQueryService, eventPublisherFactory, currentTimeProvider)
     }
 }

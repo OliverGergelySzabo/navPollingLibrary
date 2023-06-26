@@ -5,6 +5,7 @@ import com.github.oliverszabo.navpolling.polling.NavQueryService
 import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.eventpublishing.EventPublisherFactory
 import com.github.oliverszabo.navpolling.polling.InvoiceFeedPoller
+import com.github.oliverszabo.navpolling.util.CurrentTimeProvider
 import org.slf4j.LoggerFactory
 import org.springframework.context.SmartLifecycle
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
@@ -18,6 +19,7 @@ class LifecycleManager(
     private val librarySettings: LibrarySettings,
     private val navQueryService: NavQueryService,
     private val eventPublisherFactory: EventPublisherFactory,
+    private val currentTimeProvider: CurrentTimeProvider
 ): SmartLifecycle {
     companion object {
         private val log = LoggerFactory.getLogger(LifecycleManager::class.java)
@@ -26,7 +28,6 @@ class LifecycleManager(
         const val TIMEOUT_REACHED_MESSAGE_TEMPLATE = "Timeout reached while waiting for ongoing polling to finish " +
                 "(this can cause duplicate invoice arrived events for some feeds when the application is restarted)"
         const val POLLING_POOL_THREAD_NAME_PREFIX = "NavPollingLibraryPool"
-        const val ADDITIONAL_TIMEOUT = 1L
     }
 
     private val pollingScheduler = ThreadPoolTaskScheduler().apply {
@@ -45,7 +46,7 @@ class LifecycleManager(
             feed.init()
             scheduledPollingTasks.add(
                 pollingScheduler.schedule(
-                    InvoiceFeedPoller(feed, eventPublisherFactory.getEventPublishers(feed.javaClass), navQueryService),
+                    InvoiceFeedPoller(feed, eventPublisherFactory.getEventPublishers(feed.javaClass), navQueryService, currentTimeProvider),
                     librarySettings.pollingFrequency
                 )!!
             )

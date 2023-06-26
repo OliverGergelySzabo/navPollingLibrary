@@ -21,44 +21,44 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 class NavQueryServiceTest {
-    private val inboundTechnicalUser = createTechnicalUser("inbound", setOf(InvoiceDirection.INBOUND))
-    private val outboundTechnicalUser = createTechnicalUser("outbound", setOf(InvoiceDirection.OUTBOUND))
-    private val bothDirectionsTechnicalUser = createTechnicalUser("bothDirections", setOf(InvoiceDirection.OUTBOUND, InvoiceDirection.INBOUND))
+    private val to = Instant.now().truncatedTo(ChronoUnit.SECONDS)
 
-    private val from = Instant.now().truncatedTo(ChronoUnit.SECONDS)
-    private val to = from.plusDays(50)
+    private val inboundTechnicalUser = createTechnicalUser("inbound", setOf(InvoiceDirection.INBOUND), to.minusDays(36))
+    private val outboundTechnicalUser = createTechnicalUser("outbound", setOf(InvoiceDirection.OUTBOUND), to.minusDays(38))
+    private val bothDirectionsTechnicalUser = createTechnicalUser("bothDirections", setOf(InvoiceDirection.OUTBOUND, InvoiceDirection.INBOUND), to.minusDays(40))
+
 
     private val expectedMatchingDigestData = listOf(
         // matching invoices for inboundTechnicalUser
-        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "matching1", "inboundSupplier", from.plusDays(5)),
-        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "matching2", "inboundSupplier", from.plusDays(5)),
-        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "matching3", "inboundSupplier", from.plusDays(5)),
-        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "matching4", "inboundSupplier", from.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST).plusSeconds(1)),
-        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "matching5", "inboundSupplier", from.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST).plusDays(1)),
+        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "matching1", "inboundSupplier", inboundTechnicalUser.pollingCompleteUntil!!.plusDays(5)),
+        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "matching2", "inboundSupplier", inboundTechnicalUser.pollingCompleteUntil!!.plusDays(5)),
+        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "matching3", "inboundSupplier", inboundTechnicalUser.pollingCompleteUntil!!.plusDays(5)),
+        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "matching4", "inboundSupplier", inboundTechnicalUser.pollingCompleteUntil!!.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST).plusSeconds(1)),
+        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "matching5", "inboundSupplier", inboundTechnicalUser.pollingCompleteUntil!!.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST).plusDays(1)),
         // matching invoices for outboundTechnicalUser
-        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "matching1", "outbound", from.plusDays(10)),
-        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "matching2", "outbound", from.plusDays(10)),
-        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "matching3", "outbound", from.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST).plusDays(1)),
-        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "matching4", "outbound", from.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST).plusSeconds(1)),
-        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "matching5", "outbound", from.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST).plusDays(1)),
+        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "matching1", "outbound", outboundTechnicalUser.pollingCompleteUntil!!.plusDays(10)),
+        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "matching2", "outbound", outboundTechnicalUser.pollingCompleteUntil!!.plusDays(10)),
+        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "matching3", "outbound", outboundTechnicalUser.pollingCompleteUntil!!.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST).plusDays(3)),
+        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "matching4", "outbound", outboundTechnicalUser.pollingCompleteUntil!!.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST).plusSeconds(1)),
+        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "matching5", "outbound", outboundTechnicalUser.pollingCompleteUntil!!.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST).plusDays(1)),
         // matching invoices for bothDirectionsTechnicalUser
-        createInvoiceDigestData(bothDirectionsTechnicalUser, InvoiceDirection.OUTBOUND, "matching1", "bothDirections", from.plusDays(10)),
-        createInvoiceDigestData(bothDirectionsTechnicalUser, InvoiceDirection.INBOUND, "matching2", "bothDirectionsSupplier", from.plusDays(10)),
+        createInvoiceDigestData(bothDirectionsTechnicalUser, InvoiceDirection.OUTBOUND, "matching1", "bothDirections", bothDirectionsTechnicalUser.pollingCompleteUntil!!.plusDays(10)),
+        createInvoiceDigestData(bothDirectionsTechnicalUser, InvoiceDirection.INBOUND, "matching2", "bothDirectionsSupplier", bothDirectionsTechnicalUser.pollingCompleteUntil!!.plusDays(10)),
         // testing whether duplicates are properly removed
-        createInvoiceDigestData(bothDirectionsTechnicalUser, InvoiceDirection.OUTBOUND, "matching3", "bothDirections", from.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST)),
-        createInvoiceDigestData(bothDirectionsTechnicalUser, InvoiceDirection.INBOUND, "matching4", "bothDirectionsSupplier", from.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST)),
+        createInvoiceDigestData(bothDirectionsTechnicalUser, InvoiceDirection.OUTBOUND, "matching3", "bothDirections", bothDirectionsTechnicalUser.pollingCompleteUntil!!.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST)),
+        createInvoiceDigestData(bothDirectionsTechnicalUser, InvoiceDirection.INBOUND, "matching4", "bothDirectionsSupplier", bothDirectionsTechnicalUser.pollingCompleteUntil!!.plusDays(NavQueryService.MAX_NUMBER_OF_DAYS_IN_REQUEST)),
     )
     private val digestData = listOf(
         // not matching invoices for inboundTechnicalUser
-        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.OUTBOUND, "wrongDirection", "inboundSupplier", from.plusDays(1)),
-        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "insDateLessThanFrom", "inboundSupplier", from.minusSeconds(1)),
+        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.OUTBOUND, "wrongDirection", "inboundSupplier", inboundTechnicalUser.pollingCompleteUntil!!.plusDays(1)),
+        createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "insDateLessThanFrom", "inboundSupplier", inboundTechnicalUser.pollingCompleteUntil!!.minusSeconds(1)),
         createInvoiceDigestData(inboundTechnicalUser, InvoiceDirection.INBOUND, "insDateMoreThanTo", "inboundSupplier", to.plusDays(1)),
         // not matching invoices for outboundTechnicalUser
-        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.INBOUND, "wrongDirection", "outbound", from.plusDays(1)),
-        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "insDateLessThanFrom", "outbound", from.minusDays(1)),
+        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.INBOUND, "wrongDirection", "outbound", outboundTechnicalUser.pollingCompleteUntil!!.plusDays(1)),
+        createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "insDateLessThanFrom", "outbound", outboundTechnicalUser.pollingCompleteUntil!!.minusDays(1)),
         createInvoiceDigestData(outboundTechnicalUser, InvoiceDirection.OUTBOUND, "insDateMoreThanTo", "outbound", to.plusSeconds(1)),
         // not matching invoices for bothDirectionsTechnicalUser
-        createInvoiceDigestData(bothDirectionsTechnicalUser, InvoiceDirection.OUTBOUND, "insDateLessThanFrom", "bothDirections", from.minusSeconds(1)),
+        createInvoiceDigestData(bothDirectionsTechnicalUser, InvoiceDirection.OUTBOUND, "insDateLessThanFrom", "bothDirections", bothDirectionsTechnicalUser.pollingCompleteUntil!!.minusSeconds(1)),
         createInvoiceDigestData(bothDirectionsTechnicalUser, InvoiceDirection.INBOUND, "insDateEqualToTo", "bothDirectionsSupplier", to),
     ).plus(expectedMatchingDigestData)
 
@@ -112,22 +112,34 @@ class NavQueryServiceTest {
     @Test
     fun whenFromIsGreaterThanToFetchInvoiceDigestThrowsException() {
         assertThrows<IllegalArgumentException> {
-            navQueryService!!.fetchInvoiceDigests(emptySet(), from, from.minusDays(1))
+            navQueryService!!.fetchInvoiceDigests(
+                setOf(
+                    inboundTechnicalUser.withPollingCompleteUntil(to.plusSeconds(1)),
+                    outboundTechnicalUser,
+                    bothDirectionsTechnicalUser),
+                to
+            )
         }
     }
 
     @Test
     fun whenFromOrToIsNotTruncatedToSecondsInvoiceDigestThrowsException() {
         assertThrows<IllegalArgumentException> {
-            navQueryService!!.fetchInvoiceDigests(emptySet(), from, to.plusMillis(1))
+            navQueryService!!.fetchInvoiceDigests(
+                setOf(inboundTechnicalUser, outboundTechnicalUser, bothDirectionsTechnicalUser),
+                to.plusMillis(1)
+            )
         }
 
         assertThrows<IllegalArgumentException> {
-            navQueryService!!.fetchInvoiceDigests(emptySet(), from.plusMillis(1), to)
-        }
-
-        assertThrows<IllegalArgumentException> {
-            navQueryService!!.fetchInvoiceDigests(emptySet(), from.plusMillis(1), to.plusMillis(1))
+            navQueryService!!.fetchInvoiceDigests(
+                setOf(
+                    inboundTechnicalUser.withPollingCompleteUntil(inboundTechnicalUser.pollingCompleteUntil!!.plusMillis(1)),
+                    outboundTechnicalUser,
+                    bothDirectionsTechnicalUser
+                ),
+                to
+            )
         }
     }
 
@@ -135,7 +147,6 @@ class NavQueryServiceTest {
     fun whenCorrectParamsSuppliedFetchInvoiceDigestReturnsExpectedResult() {
         val fetchedDigests = navQueryService!!.fetchInvoiceDigests(
             setOf(inboundTechnicalUser, outboundTechnicalUser, bothDirectionsTechnicalUser),
-            from,
             to
         ).toMutableList()
 
@@ -144,6 +155,8 @@ class NavQueryServiceTest {
             expectedDigest == actualDigest && expectedDirection == actualDirection && expectedTechnicalUserTaxNumber == actualTechnicalUser.taxNumber
         }
     }
+
+    //todo: test for InvoiceData fetching
 
     private fun createInvoiceDigestData(
         technicalUser: TechnicalUser,
@@ -167,13 +180,14 @@ class NavQueryServiceTest {
         )
     }
 
-    private fun createTechnicalUser(taxNumber: String, pollingDirections: Set<InvoiceDirection>): TechnicalUser {
+    private fun createTechnicalUser(taxNumber: String, pollingDirections: Set<InvoiceDirection>, pollingCompleteUntil: Instant): TechnicalUser {
         return TechnicalUser(
             login = "${taxNumber}-login",
             password = "${taxNumber}-password",
             taxNumber = taxNumber,
             sigKey = "${taxNumber}-sigKey",
-            pollingDirections = pollingDirections
+            pollingDirections = pollingDirections,
+            pollingCompleteUntil = pollingCompleteUntil
         )
     }
 }
