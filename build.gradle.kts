@@ -50,10 +50,24 @@ tasks {
 }
 
 publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/olivergergelyszabo/navpollinglibrary")
+            credentials {
+                username = "olivergergelyszabo" //project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
+                password = "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" //project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+            }
+        }
+    }
     publications {
-        register<MavenPublication>("release") {
+        /*register<MavenPublication>("release") {
             groupId = "com.github.OliverGergelySzabo"
             artifactId = "navPollingLibrary"
+            from(components["kotlin"])
+        }*/
+
+        register<MavenPublication>("gpr") {
             from(components["kotlin"])
         }
     }

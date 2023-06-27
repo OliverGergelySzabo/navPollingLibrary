@@ -3,6 +3,7 @@ package com.github.oliverszabo.navpolling.eventpublishing
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import com.github.oliverszabo.navpolling.api.TechnicalUser
+import com.github.oliverszabo.navpolling.api.annotation.IgnoredField
 import com.github.oliverszabo.navpolling.api.annotation.InvoiceFieldMapping
 import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.model.InvoiceDigest
@@ -75,6 +76,7 @@ class EventPublisher(
             //todo: think about making this recursive (make issue)
             invoiceFieldsByTargetFieldName = invoiceParameterType
                 .declaredFields
+                .filter { !it.isAnnotationPresent(IgnoredField::class.java) }
                 .associate { field -> Pair(field.name, invoiceFieldFactory.getInvoiceField(getInvoiceFieldName(field), field)) }
             targetFieldsByName = invoiceParameterType.declaredFields.associateBy { it.name }
             isOnlyDigestDataRequired = invoiceFieldsByTargetFieldName.all { it.value is InvoiceDigestField }

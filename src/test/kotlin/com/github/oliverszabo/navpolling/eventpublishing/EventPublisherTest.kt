@@ -2,6 +2,7 @@ package com.github.oliverszabo.navpolling.eventpublishing
 
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import com.github.oliverszabo.navpolling.api.TechnicalUser
+import com.github.oliverszabo.navpolling.api.annotation.IgnoredField
 import com.github.oliverszabo.navpolling.api.annotation.InvoiceFieldMapping
 import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.model.InvoiceDigest
@@ -114,6 +115,7 @@ class EventPublisherTest {
     }
 
     @Test
+    //todo make each class a separate test
     fun publishInvoiceArrivedEventInvokesEventHandlerWithTheCorrectArguments() {
         class OnlyInvoiceDigestFields(
             val invoiceNumber: String,
@@ -167,6 +169,12 @@ class EventPublisherTest {
             var customerTaxNumber: InvoiceData.CustomerTaxNumber? = null
             var insDate: Instant? = null
         }
+        class ContainingIgnoredField(
+            val invoiceNumber: String,
+            val invoiceIssueDate: LocalDate,
+            @IgnoredField
+            val ignoredField: String? = null,
+        )
 
         val capturedEventHandlerObject = slot<Any>()
         val capturedInvoice = slot<Any>()
@@ -306,6 +314,25 @@ class EventPublisherTest {
                 customerTaxNumber = InvoiceData.CustomerTaxNumber("99887764", "2", "02")
                 insDate = invoiceDigest.insDate
             },
+            technicalUser,
+            InvoiceDirection.OUTBOUND,
+            capturedInvoice,
+            capturedTechnicalUser,
+            capturedInvoiceDirection
+        )
+
+        every { eventHandlerMethod.parameterTypes } returns arrayOf(
+            ContainingIgnoredField::class.java,
+            TechnicalUser::class.java,
+            InvoiceDirection::class.java
+        )
+        createEventPublisher().publishInvoiceArrivedEvent(invoiceData, invoiceDigest, technicalUser, InvoiceDirection.OUTBOUND)
+        assertEventHandlerCalledEventHandlerObject(capturedEventHandlerObject)
+        assertEventHandlerArguments(
+            ContainingIgnoredField(
+                invoiceDigest.invoiceNumber,
+                invoiceDigest.invoiceIssueDate
+            ),
             technicalUser,
             InvoiceDirection.OUTBOUND,
             capturedInvoice,
