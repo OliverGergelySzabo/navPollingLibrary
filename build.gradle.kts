@@ -55,8 +55,8 @@ publishing {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/olivergergelyszabo/navpollinglibrary")
             credentials {
-                username = "olivergergelyszabo" //project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
-                password = "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" //project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+                username = System.getenv("GITHUB_USERNAME")
+                password = System.getenv("GITHUB_TOKEN")
             }
         }
     }
