@@ -3,6 +3,7 @@ package com.github.oliverszabo.navpolling.polling
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
 import com.github.oliverszabo.navpolling.api.TechnicalUser
+import com.github.oliverszabo.navpolling.api.exception.ErrorOccurredInEventHandlerException
 import com.github.oliverszabo.navpolling.api.exception.NavInvoiceServiceConnectionException
 import com.github.oliverszabo.navpolling.api.exception.NavQueryException
 import com.github.oliverszabo.navpolling.eventpublishing.EventPublisher
@@ -10,7 +11,6 @@ import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.model.InvoiceDigest
 import com.github.oliverszabo.navpolling.util.CurrentTimeProvider
 import com.github.oliverszabo.navpolling.util.createXmlMapper
-import com.github.oliverszabo.navpolling.util.minusDays
 import io.mockk.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -52,7 +52,6 @@ class InvoiceFeedPollerTest {
     private val technicalUser = TechnicalUser("l", "p", "t", "s")
     private val now = Instant.now()
     private val nowTruncated = now.truncatedTo(ChronoUnit.SECONDS)
-    private val pollingCompleteUntil = now.minusDays(1)
 
     @BeforeEach
     fun beforeEach() {
@@ -191,6 +190,61 @@ class InvoiceFeedPollerTest {
             }
             verify(exactly = 0) {
                 publisher.publishInvoiceArrivedEvent(any(), any(), any())
+            }
+        }
+    }
+
+    @Test
+    fun whenEventPublisherThrowsErrorOccurredInEventHandlerExceptionThenItIsLoggedAndPublishingContinuesInvoiceDigestCase() {
+        val queryResults = listOf(
+            NavQueryService.DigestQueryResult(invoiceDigest, technicalUser, InvoiceDirection.OUTBOUND)
+        )
+
+        every { invoiceFeed.getUsers() } returns setOf(technicalUser)
+        every { navQueryService.fetchInvoiceDigests(eq(setOf(technicalUser)), eq(nowTruncated)) } returns queryResults
+        every { eventPublishers[0].publishInvoiceArrivedEvent(any(), any(), any()) } throws ErrorOccurredInEventHandlerException(Exception("hello"))
+
+        /*val method = mockk<Method>()
+        val declaringClass = mockk<Class<*>>()
+        every { method.name } returns "MethodName"
+        every { method.declaringClass.canonicalName } returns "canonical.name.DeclaringClass"
+        every { eventPublishers[0].eventHandlerMethod } returns method*/
+        //invoiceDigest case
+        createAndRunInvoiceFeedPoller()
+
+        verify(exactly = 1) {
+            //todo: implement checking for error message
+            logger.warn(any())
+        }
+        queryResults.forEach { result ->
+            verify(exactly = 1) {
+                eventPublishers[1].publishInvoiceArrivedEvent(eq(result.invoiceDigest), eq(result.technicalUser), eq(result.invoiceDirection))
+            }
+        }
+    }
+
+    @Test
+    fun whenEventPublisherThrowsErrorOccurredInEventHandlerExceptionThenItIsLoggedAndPublishingContinuesInvoiceDataCase() {
+        val queryResults = listOf(
+            NavQueryService.QueryResult(invoiceData, invoiceDigest, technicalUser, InvoiceDirection.INBOUND)
+        )
+
+        every { invoiceFeed.getUsers() } returns setOf(technicalUser)
+        every { navQueryService.fetchInvoiceDigestsAndData(eq(setOf(technicalUser)), eq(nowTruncated)) } returns queryResults
+        every { eventPublishers[0].publishInvoiceArrivedEvent(any(), any(), any(), any()) } throws ErrorOccurredInEventHandlerException(Exception("hello"))
+
+        createAndRunInvoiceFeedPoller()
+
+        every { eventPublishers[0].isOnlyDigestDataRequired } returns false
+        createAndRunInvoiceFeedPoller()
+
+        verify(exactly = 1) {
+            //todo: implement checking for error message
+            logger.warn(any())
+        }
+        queryResults.forEach { result ->
+            verify(exactly = 1) {
+                eventPublishers[1].publishInvoiceArrivedEvent(eq(result.invoiceData), eq(result.invoiceDigest), eq(result.technicalUser), eq(result.invoiceDirection))
             }
         }
     }

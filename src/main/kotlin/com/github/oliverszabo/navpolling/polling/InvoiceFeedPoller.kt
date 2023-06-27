@@ -1,6 +1,7 @@
 package com.github.oliverszabo.navpolling.polling
 
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
+import com.github.oliverszabo.navpolling.api.exception.ErrorOccurredInEventHandlerException
 import com.github.oliverszabo.navpolling.api.exception.NavInvoiceServiceConnectionException
 import com.github.oliverszabo.navpolling.api.exception.NavQueryException
 import com.github.oliverszabo.navpolling.eventpublishing.EventPublisher
@@ -20,6 +21,7 @@ class InvoiceFeedPoller(
         const val NAV_QUERY_ERROR_MESSAGE_TEMPLATE = POLLING_ERROR_START + "the NAV API returned an error (funcCode: %s, errorCode: %s, message: %s)"
         const val POLLING_INTERRUPTED_MESSAGE_TEMPLATE
             = "Polling of the '%s' invoice feed has been interrupted (this can cause duplicate invoice arrived events when the application is restarted)"
+        const val ERROR_OCCURRED_IN_EVENT_HANDLER_MESSAGE_TEMPLATE = "The following error occurred in event handler '%s': %s"
 
         private val log = LoggerFactory.getLogger(InvoiceFeedPoller::class.java)
     }
@@ -34,13 +36,21 @@ class InvoiceFeedPoller(
             if(isOnlyDigestDataRequired) {
                 navQueryService.fetchInvoiceDigests(users, to).forEach { (digest, user, direction) ->
                     eventPublishers.forEach {
-                        it.publishInvoiceArrivedEvent(digest, user, direction)
+                        try {
+                            it.publishInvoiceArrivedEvent(digest, user, direction)
+                        } catch (e: ErrorOccurredInEventHandlerException) {
+                            handleErrorOccurredInEventHandlerException(e, it)
+                        }
                     }
                 }
             } else {
                 navQueryService.fetchInvoiceDigestsAndData(users, to).forEach { (data, digest, user, direction) ->
                     eventPublishers.forEach {
-                        it.publishInvoiceArrivedEvent(data, digest, user, direction)
+                        try {
+                            it.publishInvoiceArrivedEvent(data, digest, user, direction)
+                        } catch (e: ErrorOccurredInEventHandlerException) {
+                            handleErrorOccurredInEventHandlerException(e, it)
+                        }
                     }
                 }
             }
@@ -53,5 +63,15 @@ class InvoiceFeedPoller(
             log.warn(POLLING_INTERRUPTED_MESSAGE_TEMPLATE.format(invoiceFeed::class.java.canonicalName))
             Thread.currentThread().interrupt()
         }
+    }
+
+    private fun handleErrorOccurredInEventHandlerException(e: ErrorOccurredInEventHandlerException, eventPublisher: EventPublisher) {
+        log.warn(
+            ERROR_OCCURRED_IN_EVENT_HANDLER_MESSAGE_TEMPLATE.format(
+                "${eventPublisher.eventHandlerMethod.declaringClass.canonicalName}.${eventPublisher.eventHandlerMethod.name}",
+                e.cause!!.message
+            )
+        )
+        e.cause!!.printStackTrace()
     }
 }

@@ -4,6 +4,7 @@ import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import com.github.oliverszabo.navpolling.api.TechnicalUser
 import com.github.oliverszabo.navpolling.api.annotation.IgnoredField
 import com.github.oliverszabo.navpolling.api.annotation.InvoiceFieldMapping
+import com.github.oliverszabo.navpolling.api.exception.ErrorOccurredInEventHandlerException
 import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.model.InvoiceDigest
 import com.github.oliverszabo.navpolling.util.assertThrownException
@@ -12,6 +13,7 @@ import io.mockk.*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.assertThrows
 import java.lang.reflect.Method
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -112,6 +114,18 @@ class EventPublisherTest {
 
         every { eventHandlerMethod.parameterTypes } returns arrayOf(BothParamsSupplied::class.java)
         createEventPublisherAndAssertThrownException(EventPublisher.INVOICE_FIELD_MAPPING_BOTH_PARAMS_SUPPLIED_ERROR_MESSAGE)
+    }
+
+    @Test
+    fun whenEventHandlerMethodThrowsExceptionItIsWrappedIntoErrorOccurredInEventHandlerException() {
+        val expectedCause = Exception("hello")
+        every { eventHandlerMethod.parameterTypes } returns arrayOf(InvoiceDigest::class.java)
+        every { eventHandlerMethod.invoke(any(), any()) } throws expectedCause
+
+        val exception = assertThrows<ErrorOccurredInEventHandlerException> {
+            createEventPublisher().publishInvoiceArrivedEvent(invoiceDigest, technicalUser, InvoiceDirection.INBOUND)
+        }
+        assertEquals(expectedCause, exception.cause)
     }
 
     @Test

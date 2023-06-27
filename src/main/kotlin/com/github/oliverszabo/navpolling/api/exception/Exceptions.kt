@@ -7,3 +7,5 @@ class NavPollingLibraryInitializationException(message: String?, cause: Throwabl
 class NavInvoiceServiceConnectionException(cause: Throwable): NavPollingLibraryException(cause = cause)
 
 class NavQueryException(val funcCode: String?, val errorCode: String?, message: String?): NavPollingLibraryException(message)
+
+class ErrorOccurredInEventHandlerException(cause: Throwable): NavPollingLibraryException(cause = cause)

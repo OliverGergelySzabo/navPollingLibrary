@@ -5,6 +5,7 @@ import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import com.github.oliverszabo.navpolling.api.TechnicalUser
 import com.github.oliverszabo.navpolling.api.annotation.IgnoredField
 import com.github.oliverszabo.navpolling.api.annotation.InvoiceFieldMapping
+import com.github.oliverszabo.navpolling.api.exception.ErrorOccurredInEventHandlerException
 import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.model.InvoiceDigest
 import com.github.oliverszabo.navpolling.util.TypeUtils
@@ -156,7 +157,11 @@ class EventPublisher(
                 }
             }
             .toTypedArray()
-        eventHandlerMethod.invoke(eventHandlerObject, *methodArguments)
+        try {
+            eventHandlerMethod.invoke(eventHandlerObject, *methodArguments)
+        } catch (e: Throwable) {
+            throw ErrorOccurredInEventHandlerException(e)
+        }
     }
 
     private fun convertValueIfNecessary(originalValue: Any?, targetType: Class<*>): Any? {
