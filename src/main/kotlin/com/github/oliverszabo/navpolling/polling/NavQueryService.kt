@@ -17,7 +17,7 @@ import javax.annotation.PreDestroy
 
 @Component
 class NavQueryService(
-    librarySettings: LibrarySettings
+    private val librarySettings: LibrarySettings
 ) {
     companion object {
         const val MAX_NUMBER_OF_DAYS_IN_REQUEST = 34L
@@ -42,7 +42,7 @@ class NavQueryService(
             return@runBlocking fetchInvoiceDigests(technicalUsers, to).map { (invoiceDigest, technicalUser, direction) ->
                 connectionScope.async {
                     QueryResult(
-                        fetchInvoiceData(client, NavTechnicalUser.from(technicalUser), invoiceDigest, direction),
+                        fetchInvoiceData(client, NavTechnicalUser.from(technicalUser, librarySettings.passwordHashingRequired), invoiceDigest, direction),
                         invoiceDigest,
                         technicalUser,
                         direction
@@ -71,7 +71,7 @@ class NavQueryService(
                 createBounds(user.pollingCompleteUntil!!, to).flatMap { (from, to) ->
                     user.pollingDirections.map { direction ->
                         connectionScope.async {
-                            fetchInvoiceDigestsForPeriod(client, NavTechnicalUser.from(user), direction, from, to).map {
+                            fetchInvoiceDigestsForPeriod(client, NavTechnicalUser.from(user, librarySettings.passwordHashingRequired), direction, from, to).map {
                                 DigestQueryResult(it, user, direction)
                             }
                         }

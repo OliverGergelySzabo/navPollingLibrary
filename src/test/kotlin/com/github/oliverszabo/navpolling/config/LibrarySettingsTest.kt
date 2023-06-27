@@ -9,9 +9,11 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.core.env.Environment
+import org.springframework.core.env.getProperty
 import org.springframework.scheduling.support.CronTrigger
 import org.springframework.scheduling.support.PeriodicTrigger
 import java.util.concurrent.TimeUnit
+import kotlin.math.exp
 
 class LibrarySettingsTest {
     private val environment = mockk<Environment>(relaxed = true)
@@ -20,6 +22,7 @@ class LibrarySettingsTest {
     fun beforeEach() {
         every { environment.getProperty<Int?>(any(), any()) } returns null
         every { environment.getProperty(any()) } returns null
+        every { environment.getProperty<Boolean?>(any()) } returns null
     }
 
     @Test
@@ -193,6 +196,18 @@ class LibrarySettingsTest {
         createLibrarySettingsAndAssertException(
             ErrorMessages.propertyMustBeGreaterThanOrEqualTo(LibrarySettings.PropertyNames.SHUTDOWN_TIMEOUT, 0)
         )
+    }
+
+    @Test
+    fun ifPasswordHashingRequiredIsNotSpecifiedThenTheDefaultValueIsReturned() {
+        assertEquals(LibrarySettings.DefaultValues.passwordHashingRequired, createLibrarySettings().passwordHashingRequired)
+    }
+
+    @Test
+    fun ifPasswordHashingRequiredIsSpecifiedThenTheCorrectValueIsReturned() {
+        val expectedPasswordHashingRequired = true
+        every { environment.getProperty<Boolean?>(LibrarySettings.PropertyNames.PASSWORD_HASHING_REQUIRED) } returns expectedPasswordHashingRequired
+        assertEquals(expectedPasswordHashingRequired, createLibrarySettings().passwordHashingRequired)
     }
 
     private fun createLibrarySettings(): LibrarySettings {

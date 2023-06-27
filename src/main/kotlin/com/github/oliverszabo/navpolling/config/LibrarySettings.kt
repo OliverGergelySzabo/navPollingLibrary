@@ -27,6 +27,7 @@ class LibrarySettings(
     val pollingFrequency: Trigger = initializePollingFrequency()
     val defaultPastFetchingPeriod: Int = initializeDefaultPastFetchingPeriod()
     val shutdownTimeout: Int = initializeShutdownTimeout()
+    val passwordHashingRequired: Boolean = initializePasswordHashingRequired()
 
     private fun initializePollingFrequency(): Trigger {
         val specifiedPollingFrequency = environment.getProperty(PropertyNames.POLLING_FREQUENCY)
@@ -91,22 +92,24 @@ class LibrarySettings(
         return specifiedShutdownTimeout
     }
 
-    class PropertyNames private constructor() {
-        companion object {
-            const val POLLING_POOL_SIZE = "nav-polling.polling-pool-size"
-            const val CONNECTION_POOL_SIZE = "nav-polling.connection-pool-size"
-            const val POLLING_FREQUENCY = "nav-polling.polling-frequency"
-            const val DEFAULT_PAST_FETCHING_PERIOD = "nav-polling.default-past-fetching-period"
-            const val SHUTDOWN_TIMEOUT = "nav-polling.shutdown-timeout"
-        }
+    private fun initializePasswordHashingRequired(): Boolean {
+         return environment.getProperty<Boolean?>(PropertyNames.PASSWORD_HASHING_REQUIRED) ?: DefaultValues.passwordHashingRequired
     }
-    class DefaultValues private constructor() {
-        companion object {
-            const val pollingPoolSize = 5
-            const val connectionPoolSize = 10
-            val pollingFrequency = PeriodicTrigger(1, TimeUnit.DAYS)
-            const val defaultPastFetchingPeriod = 0
-            const val shutdownTimeout = 10
-        }
+
+    object PropertyNames {
+        const val POLLING_POOL_SIZE = "nav-polling.polling-pool-size"
+        const val CONNECTION_POOL_SIZE = "nav-polling.connection-pool-size"
+        const val POLLING_FREQUENCY = "nav-polling.polling-frequency"
+        const val DEFAULT_PAST_FETCHING_PERIOD = "nav-polling.default-past-fetching-period"
+        const val SHUTDOWN_TIMEOUT = "nav-polling.shutdown-timeout"
+        const val PASSWORD_HASHING_REQUIRED = "nav-polling.password-hashing-required"
+    }
+    object DefaultValues {
+        const val pollingPoolSize = 5
+        const val connectionPoolSize = 10
+        val pollingFrequency = PeriodicTrigger(1, TimeUnit.HOURS)
+        const val defaultPastFetchingPeriod = 0
+        const val shutdownTimeout = 10
+        const val passwordHashingRequired = false
     }
 }

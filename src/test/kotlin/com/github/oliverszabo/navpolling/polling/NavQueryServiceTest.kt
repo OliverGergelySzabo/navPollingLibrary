@@ -6,19 +6,24 @@ import com.github.oliverszabo.navpolling.polling.dto.QueryInvoiceDigestRequest
 import com.github.oliverszabo.navpolling.polling.dto.QueryInvoiceDigestResponse
 import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.model.InvoiceDigest
+import com.github.oliverszabo.navpolling.polling.dto.NavTechnicalUser
 import com.github.oliverszabo.navpolling.util.assertListsContainSameElements
 import com.github.oliverszabo.navpolling.util.minusDays
 import com.github.oliverszabo.navpolling.util.plusDays
-import io.mockk.coEvery
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkConstructor
+import io.mockk.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.ArgumentsSource
+import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.ValueSource
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import java.util.stream.Stream
 
 class NavQueryServiceTest {
     private val to = Instant.now().truncatedTo(ChronoUnit.SECONDS)
@@ -26,7 +31,6 @@ class NavQueryServiceTest {
     private val inboundTechnicalUser = createTechnicalUser("inbound", setOf(InvoiceDirection.INBOUND), to.minusDays(36))
     private val outboundTechnicalUser = createTechnicalUser("outbound", setOf(InvoiceDirection.OUTBOUND), to.minusDays(38))
     private val bothDirectionsTechnicalUser = createTechnicalUser("bothDirections", setOf(InvoiceDirection.OUTBOUND, InvoiceDirection.INBOUND), to.minusDays(40))
-
 
     private val expectedMatchingDigestData = listOf(
         // matching invoices for inboundTechnicalUser
@@ -106,6 +110,14 @@ class NavQueryServiceTest {
 
         every { librarySettings.connectionPoolSize } returns 1
 
+        mockkObject(NavTechnicalUser.Companion)
+        every { NavTechnicalUser.from(any(), any()) } answers {
+            // assertion for the fact that the NavQueryService call the NavTechnicalUser.from
+            // with the correct value form library settings
+            assertEquals(librarySettings.passwordHashingRequired, secondArg())
+            callOriginal()
+        }
+
         navQueryService = NavQueryService(librarySettings)
     }
 
@@ -143,8 +155,13 @@ class NavQueryServiceTest {
         }
     }
 
-    @Test
-    fun whenCorrectParamsSuppliedFetchInvoiceDigestReturnsExpectedResult() {
+    //parametrized test is needed to test both cases for NavTechnicalUser.from call correctness
+    //todo: find better approach for this
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun whenCorrectParamsSuppliedFetchInvoiceDigestReturnsExpectedResult(passwordHashingRequired: Boolean) {
+        every { librarySettings.passwordHashingRequired } returns passwordHashingRequired
+
         val fetchedDigests = navQueryService!!.fetchInvoiceDigests(
             setOf(inboundTechnicalUser, outboundTechnicalUser, bothDirectionsTechnicalUser),
             to
