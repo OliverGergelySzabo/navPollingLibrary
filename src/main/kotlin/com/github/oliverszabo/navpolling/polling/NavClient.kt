@@ -2,6 +2,7 @@ package com.github.oliverszabo.navpolling.polling
 
 import com.github.oliverszabo.navpolling.api.exception.NavInvoiceServiceConnectionException
 import com.github.oliverszabo.navpolling.api.exception.NavQueryException
+import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.polling.dto.*
 import com.github.oliverszabo.navpolling.util.createXmlMapper
 import kotlinx.coroutines.future.await
@@ -12,7 +13,9 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse.BodyHandlers
 import java.time.Duration
 
-class NavClient {
+class NavClient(
+    requestTimeout: Int
+) {
     companion object{
         private const val TEST_API_URL = "https://api-test.onlineszamla.nav.gov.hu/invoiceService/v3"
         private const val PROD_API_URL = "https://api.onlineszamla.nav.gov.hu/invoiceService/v3"
@@ -21,7 +24,7 @@ class NavClient {
     }
 
     private val httpClient: HttpClient = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(5))
+        .connectTimeout(Duration.ofMillis(requestTimeout.toLong()))
         .version(HttpClient.Version.HTTP_2)
         .build()
 

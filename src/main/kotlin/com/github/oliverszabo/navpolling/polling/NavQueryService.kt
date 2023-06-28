@@ -38,7 +38,7 @@ class NavQueryService(
     ): List<QueryResult> {
         return runBlocking {
             //todo: make this optionally obey nav rate limiting rules
-            val client = NavClient()
+            val client = NavClient(librarySettings.requestTimeout)
             return@runBlocking fetchInvoiceDigests(technicalUsers, to).map { (invoiceDigest, technicalUser, direction) ->
                 connectionScope.async {
                     QueryResult(
@@ -64,7 +64,7 @@ class NavQueryService(
             throw IllegalArgumentException("The 'to' param and the 'pollingCompleteUntil' field of all given technical users must be truncated to seconds")
         }
 
-        val client = NavClient()
+        val client = NavClient(librarySettings.requestTimeout)
 
         return runBlocking {
             return@runBlocking technicalUsers.flatMap { user ->

@@ -25,6 +25,7 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.stream.Stream
 
+//todo: find a way to check whether the NavClient is created with the correct request timeout
 class NavQueryServiceTest {
     private val to = Instant.now().truncatedTo(ChronoUnit.SECONDS)
 
@@ -109,6 +110,7 @@ class NavQueryServiceTest {
         }
 
         every { librarySettings.connectionPoolSize } returns 1
+        every { librarySettings.requestTimeout } returns 1000
 
         mockkObject(NavTechnicalUser.Companion)
         every { NavTechnicalUser.from(any(), any()) } answers {

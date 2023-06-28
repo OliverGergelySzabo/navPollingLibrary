@@ -13,7 +13,6 @@ import org.springframework.core.env.getProperty
 import org.springframework.scheduling.support.CronTrigger
 import org.springframework.scheduling.support.PeriodicTrigger
 import java.util.concurrent.TimeUnit
-import kotlin.math.exp
 
 class LibrarySettingsTest {
     private val environment = mockk<Environment>(relaxed = true)
@@ -195,6 +194,28 @@ class LibrarySettingsTest {
         every { environment.getProperty<Int?>(LibrarySettings.PropertyNames.SHUTDOWN_TIMEOUT, any()) } returns -1
         createLibrarySettingsAndAssertException(
             ErrorMessages.propertyMustBeGreaterThanOrEqualTo(LibrarySettings.PropertyNames.SHUTDOWN_TIMEOUT, 0)
+        )
+    }
+
+    @Test
+    fun ifRequestTimeoutIsNotSpecifiedThenTheDefaultValueIsReturned() {
+        val settings = createLibrarySettings()
+        assertEquals(LibrarySettings.DefaultValues.requestTimeout, settings.requestTimeout)
+    }
+
+    @Test
+    fun ifRequestTimeoutIsSpecifiedThenTheCorrectValueIsReturned() {
+        val expectedTimeout = LibrarySettings.DefaultValues.requestTimeout + 5000
+        every { environment.getProperty<Int?>(LibrarySettings.PropertyNames.REQUEST_TIMEOUT, any()) } returns expectedTimeout
+        val settings = createLibrarySettings()
+        assertEquals(expectedTimeout, settings.requestTimeout)
+    }
+
+    @Test
+    fun ifRequestTimeoutLessThan1000SpecifiedThenTheCorrectErrorIsReturned() {
+        every { environment.getProperty<Int?>(LibrarySettings.PropertyNames.REQUEST_TIMEOUT, any()) } returns 999
+        createLibrarySettingsAndAssertException(
+            ErrorMessages.propertyMustBeGreaterThanOrEqualTo(LibrarySettings.PropertyNames.REQUEST_TIMEOUT, 1000)
         )
     }
 
