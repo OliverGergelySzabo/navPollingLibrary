@@ -14,7 +14,7 @@ import java.net.http.HttpResponse.BodyHandlers
 import java.time.Duration
 
 class NavClient(
-    requestTimeout: Int
+    val requestTimeout: Int
 ) {
     companion object{
         private const val TEST_API_URL = "https://api-test.onlineszamla.nav.gov.hu/invoiceService/v3"
@@ -24,14 +24,14 @@ class NavClient(
     }
 
     private val httpClient: HttpClient = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofMillis(requestTimeout.toLong()))
+        .connectTimeout(Duration.ofSeconds(5))
         .version(HttpClient.Version.HTTP_2)
         .build()
 
     suspend fun <T: NavRequest, R> query(request: T, resultClass: Class<R>): R {
         val httpRequest = HttpRequest.newBuilder()
             .uri(URI.create("$PROD_API_URL/${request.command}"))
-            .timeout(Duration.ofSeconds(5))
+            .timeout(Duration.ofMillis(requestTimeout.toLong()))
             .header("Content-Type", "application/xml")
             .header("Accept", "*/*")
             .POST(HttpRequest.BodyPublishers.ofString(request.toXml()))
