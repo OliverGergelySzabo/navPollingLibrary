@@ -2,13 +2,19 @@ package com.github.oliverszabo.navpolling.polling.dto
 
 import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.util.createXmlMapper
+import com.github.oliverszabo.navpolling.util.decompressGzip
+import com.github.oliverszabo.navpolling.util.isGzipped
 import java.util.*
 
 class QueryInvoiceDataResponse(
-    val invoiceDataResult: InvoiceDataResult? = null
+    invoiceDataResult: InvoiceDataResult? = null
 ) {
     val invoiceData: InvoiceData? = if (invoiceDataResult != null) {
-            createXmlMapper().readValue(Base64.getDecoder().decode(invoiceDataResult.invoiceData), InvoiceData::class.java)
+        var decodedData = Base64.getDecoder().decode(invoiceDataResult.invoiceData)
+        if(isGzipped(decodedData)) {
+            decodedData = decompressGzip(decodedData)
+        }
+        createXmlMapper().readValue(decodedData, InvoiceData::class.java)
     } else {
         null
     }
@@ -16,8 +22,4 @@ class QueryInvoiceDataResponse(
     data class InvoiceDataResult(
         var invoiceData : String? = null
     )
-
-    fun getSupplierBankAccountNumber() : String? {
-        return invoiceData?.invoiceMain?.invoice?.invoiceHead?.supplierInfo?.supplierBankAccountNumber
-    }
 }

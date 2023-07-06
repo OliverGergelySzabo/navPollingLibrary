@@ -7,12 +7,20 @@ import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import java.io.BufferedInputStream
+import java.io.BufferedReader
+import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.InputStreamReader
 import java.lang.reflect.Field
 import java.lang.reflect.ParameterizedType
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Instant
 import java.time.temporal.TemporalUnit
+import java.util.zip.GZIPInputStream
+import kotlin.streams.toList
 
 fun byteToHex(b: Byte) : String{
     val ret = b.toUByte().toString(16).uppercase()
@@ -27,6 +35,18 @@ fun createXmlMapper(): XmlMapper {
         setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
         disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
     }
+}
+
+fun isGzipped(byteArray: ByteArray): Boolean {
+    val inputStream = ByteArrayInputStream(byteArray)
+    val magic = inputStream.read() and 0xff or (inputStream.read() shl 8 and 0xff00)
+    return magic == GZIPInputStream.GZIP_MAGIC
+}
+
+fun decompressGzip(byteArray: ByteArray): ByteArray {
+    return BufferedReader(InputStreamReader(GZIPInputStream(ByteArrayInputStream(byteArray)))).lines()
+        .reduce("") { acc, element -> acc + element }
+        .toByteArray()
 }
 
 fun sha512Hash(s: String) : String {

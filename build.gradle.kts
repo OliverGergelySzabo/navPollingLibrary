@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.github.oliverszabo"
-version = "1.0-SNAPSHOT-1"
+version = "1.0-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {
