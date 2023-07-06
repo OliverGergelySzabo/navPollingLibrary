@@ -7,7 +7,7 @@ import com.github.oliverszabo.navpolling.util.isGzipped
 import java.util.*
 
 class QueryInvoiceDataResponse(
-    invoiceDataResult: InvoiceDataResult? = null
+    val invoiceDataResult: InvoiceDataResult? = null
 ) {
     val invoiceData: InvoiceData? = if (invoiceDataResult != null) {
         var decodedData = Base64.getDecoder().decode(invoiceDataResult.invoiceData)
