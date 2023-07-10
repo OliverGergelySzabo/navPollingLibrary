@@ -7,12 +7,11 @@ import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import java.io.BufferedInputStream
 import java.io.BufferedReader
 import java.io.ByteArrayInputStream
-import java.io.IOException
-import java.io.InputStream
 import java.io.InputStreamReader
+import com.github.oliverszabo.navpolling.api.InvoiceDirection
+import com.github.oliverszabo.navpolling.model.InvoiceDigest
 import java.lang.reflect.Field
 import java.lang.reflect.ParameterizedType
 import java.security.MessageDigest
@@ -20,7 +19,6 @@ import java.security.SecureRandom
 import java.time.Instant
 import java.time.temporal.TemporalUnit
 import java.util.zip.GZIPInputStream
-import kotlin.streams.toList
 
 fun byteToHex(b: Byte) : String{
     val ret = b.toUByte().toString(16).uppercase()
@@ -51,6 +49,14 @@ fun decompressGzip(byteArray: ByteArray): ByteArray {
 
 fun sha512Hash(s: String) : String {
     return MessageDigest.getInstance("SHA-512").hashString(s)
+}
+
+fun calculateInvoiceDirection(invoiceDigest: InvoiceDigest, currentUserTaxNumber: String): InvoiceDirection {
+    return if(invoiceDigest.supplierTaxNumber == currentUserTaxNumber) {
+        InvoiceDirection.OUTBOUND
+    } else {
+        InvoiceDirection.INBOUND
+    }
 }
 
 fun MessageDigest.hashString(s: String) : String {

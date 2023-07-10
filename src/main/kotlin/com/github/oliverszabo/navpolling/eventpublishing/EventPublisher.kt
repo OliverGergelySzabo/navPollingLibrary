@@ -85,8 +85,8 @@ class EventPublisher(
     }
 
     fun publishInvoiceArrivedEvent(
-        invoiceData: InvoiceData,
         invoiceDigest: InvoiceDigest,
+        invoiceData: InvoiceData,
         technicalUser: TechnicalUser,
         invoiceDirection: InvoiceDirection
     ) {

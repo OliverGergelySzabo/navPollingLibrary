@@ -7,6 +7,9 @@ import com.github.oliverszabo.navpolling.eventpublishing.EventPublisherFactory
 import com.github.oliverszabo.navpolling.polling.InvoiceFeedPoller
 import com.github.oliverszabo.navpolling.util.CurrentTimeProvider
 import io.mockk.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancel
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -35,6 +38,7 @@ class LifecycleManagerTest {
     private val logger = mockk<Logger>(relaxed = true)
     private val trigger = PeriodicTrigger(1, TimeUnit.DAYS)
     private val scheduledFuture = mockk<ScheduledFuture<*>>(relaxed = true)
+    private val connectionScope = mockk<CoroutineScope>(relaxed = true)
 
     private val shutdownTimout = 10
 
@@ -55,6 +59,11 @@ class LifecycleManagerTest {
         mockkStatic(LoggerFactory::class)
         every { LoggerFactory.getLogger(LifecycleManager::class.java) } returns logger
 
+        mockkStatic(::CoroutineScope)
+        every { CoroutineScope(any()) } returns connectionScope
+        every { connectionScope.cancel() } returns Unit
+
+        every { librarySettings.connectionPoolSize } returns 1
         every { librarySettings.pollingPoolSize } returns 3
         every { librarySettings.pollingFrequency } returns trigger
         every { librarySettings.shutdownTimeout } returns shutdownTimout
@@ -146,6 +155,7 @@ class LifecycleManagerTest {
                 scheduledFuture.cancel(eq(false))
             }
             anyConstructed<ThreadPoolTaskScheduler>().shutdown()
+            connectionScope.cancel()
             feeds.forEach {
                 it.destroy()
             }

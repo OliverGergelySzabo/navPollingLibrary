@@ -224,13 +224,6 @@ class InvoiceFeedTest {
         return createInvoiceFeed(pastFetchingPeriod).apply { init() }
     }
 
-    private fun createTechnicalUser(
-        login: String,
-        pollingCompleteUntil: Instant? = null,
-    ): TechnicalUser {
-        return TechnicalUser(login, "p", "t", "s", InvoiceDirection.values().toSet(), pollingCompleteUntil)
-    }
-
     private fun assertUsers(expectedUsers: Set<TechnicalUser>, actualUsers: Set<TechnicalUser>) {
         assertSetsContainSameElements(expectedUsers, actualUsers, this::isSameTechnicalUser)
     }

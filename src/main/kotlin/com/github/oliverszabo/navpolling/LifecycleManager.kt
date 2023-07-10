@@ -6,11 +6,16 @@ import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.eventpublishing.EventPublisherFactory
 import com.github.oliverszabo.navpolling.polling.InvoiceFeedPoller
 import com.github.oliverszabo.navpolling.util.CurrentTimeProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
 import org.slf4j.LoggerFactory
 import org.springframework.context.SmartLifecycle
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler
 import org.springframework.stereotype.Component
 import java.lang.Integer.max
+import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 
 @Component
@@ -39,6 +44,9 @@ class LifecycleManager(
     }
     private var isRunning: Boolean = false
     private val scheduledPollingTasks = mutableListOf<ScheduledFuture<*>>()
+    private val connectionScope = CoroutineScope(
+        SupervisorJob() + Executors.newFixedThreadPool(librarySettings.connectionPoolSize).asCoroutineDispatcher()
+    )
 
     @Synchronized
     override fun start() {
@@ -46,7 +54,13 @@ class LifecycleManager(
             feed.init()
             scheduledPollingTasks.add(
                 pollingScheduler.schedule(
-                    InvoiceFeedPoller(feed, eventPublisherFactory.getEventPublishers(feed.javaClass), navQueryService, currentTimeProvider),
+                    InvoiceFeedPoller(
+                        feed,
+                        eventPublisherFactory.getEventPublishers(feed.javaClass),
+                        navQueryService,
+                        currentTimeProvider,
+                        connectionScope
+                    ),
                     librarySettings.pollingFrequency
                 )!!
             )
@@ -72,6 +86,7 @@ class LifecycleManager(
         scheduledPollingTasks.forEach { it.cancel(false) }
         val shutDownStart = System.currentTimeMillis()
         pollingScheduler.shutdown()
+        connectionScope.cancel()
         if(System.currentTimeMillis() - shutDownStart > (librarySettings.shutdownTimeout * 1000)) {
             log.warn(TIMEOUT_REACHED_MESSAGE_TEMPLATE)
         }

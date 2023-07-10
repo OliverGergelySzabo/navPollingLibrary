@@ -2,10 +2,12 @@ package com.github.oliverszabo.navpolling.polling
 
 import com.github.oliverszabo.navpolling.api.InvoiceDirection
 import com.github.oliverszabo.navpolling.api.TechnicalUser
+import com.github.oliverszabo.navpolling.api.exception.NavInvoiceServiceConnectionException
 import com.github.oliverszabo.navpolling.polling.dto.*
 import com.github.oliverszabo.navpolling.config.LibrarySettings
 import com.github.oliverszabo.navpolling.model.InvoiceData
 import com.github.oliverszabo.navpolling.model.InvoiceDigest
+import com.github.oliverszabo.navpolling.util.calculateInvoiceDirection
 import com.github.oliverszabo.navpolling.util.isTruncatedTo
 import com.github.oliverszabo.navpolling.util.plusDays
 import kotlinx.coroutines.*
@@ -23,69 +25,47 @@ class NavQueryService(
         const val MAX_NUMBER_OF_DAYS_IN_REQUEST = 34L
     }
 
-    private val connectionScope = CoroutineScope(
-        SupervisorJob() + Executors.newFixedThreadPool(librarySettings.connectionPoolSize).asCoroutineDispatcher()
-    )
-
-    @PreDestroy
-    private fun destroy() {
-        connectionScope.cancel()
-    }
-
-    fun fetchInvoiceDigestsAndData(
-        technicalUsers: Set<TechnicalUser>,
+    suspend fun fetchInvoiceDigestsAndData(
+        technicalUser: TechnicalUser,
         to: Instant
-    ): List<QueryResult> {
-        return runBlocking {
-            //todo: make this optionally obey nav rate limiting rules
-            val client = NavClient(librarySettings.requestTimeout)
-            return@runBlocking fetchInvoiceDigests(technicalUsers, to).map { (invoiceDigest, technicalUser, direction) ->
-                connectionScope.async {
-                    QueryResult(
-                        fetchInvoiceData(client, NavTechnicalUser.from(technicalUser, librarySettings.passwordHashingRequired), invoiceDigest, direction),
-                        invoiceDigest,
-                        technicalUser,
-                        direction
-                    )
-                }
-            }.awaitAll()
+    ): List<Pair<InvoiceDigest, InvoiceData>> {
+        //todo: make this optionally obey nav rate limiting rules
+        val client = NavClient(librarySettings.requestTimeout)
+        return fetchInvoiceDigests(technicalUser, to).map { invoiceDigest ->
+                Pair(invoiceDigest, fetchInvoiceData(client, NavTechnicalUser.from(technicalUser, librarySettings.passwordHashingRequired), invoiceDigest))
         }
     }
 
-    fun fetchInvoiceDigests(
-        technicalUsers: Set<TechnicalUser>,
+    suspend fun fetchInvoiceDigests(
+        technicalUser: TechnicalUser,
         to: Instant
-    ): List<DigestQueryResult> {
-        if(technicalUsers.any { it.pollingCompleteUntil == null || it.pollingCompleteUntil > to }) {
+    ): List<InvoiceDigest> {
+        if(technicalUser.pollingCompleteUntil == null || technicalUser.pollingCompleteUntil > to) {
             throw IllegalArgumentException("The 'pollingCompleteUntil' field of all given technical users must be before the 'to' param")
         }
-        if(technicalUsers.any { it.pollingCompleteUntil?.isTruncatedTo(ChronoUnit.SECONDS) == false }
-            || !to.isTruncatedTo(ChronoUnit.SECONDS)) {
+        if(!technicalUser.pollingCompleteUntil.isTruncatedTo(ChronoUnit.SECONDS) || !to.isTruncatedTo(ChronoUnit.SECONDS)) {
             throw IllegalArgumentException("The 'to' param and the 'pollingCompleteUntil' field of all given technical users must be truncated to seconds")
         }
 
         val client = NavClient(librarySettings.requestTimeout)
 
-        return runBlocking {
-            return@runBlocking technicalUsers.flatMap { user ->
-                createBounds(user.pollingCompleteUntil!!, to).flatMap { (from, to) ->
-                    user.pollingDirections.map { direction ->
-                        connectionScope.async {
-                            fetchInvoiceDigestsForPeriod(client, NavTechnicalUser.from(user, librarySettings.passwordHashingRequired), direction, from, to).map {
-                                DigestQueryResult(it, user, direction)
-                            }
-                        }
-                    }
+        return createBounds(technicalUser.pollingCompleteUntil, to).flatMap { (from, to) ->
+                technicalUser.pollingDirections.map { direction ->
+                    fetchInvoiceDigestsForPeriod(
+                        client,
+                        NavTechnicalUser.from(technicalUser, librarySettings.passwordHashingRequired),
+                        direction,
+                        from,
+                        to
+                    )
                 }
             }
-                .awaitAll()
-                .flatten()
-                // removing invoices on the upper bound, as this function has an exclusive upper bound
-                // while the NAV API has an inclusive upper bound
-                .filter { (digest, _, _) -> digest.insDate != to }
-                // removing potential duplicates caused by overlapping boundaries
-                .distinctBy { (digest, _, _) -> digest }
-        }
+            .flatten()
+            // removing invoices on the upper bound, as this function has an exclusive upper bound
+            // while the NAV API has an inclusive upper bound
+            .filter { it.insDate != to }
+            // removing potential duplicates caused by overlapping boundaries
+            .distinct()
     }
 
     private fun createBounds(from: Instant, to: Instant): List<Pair<Instant, Instant>> {
@@ -141,15 +121,16 @@ class NavQueryService(
         client: NavClient,
         navTechnicalUser: NavTechnicalUser,
         invoiceDigest: InvoiceDigest,
-        invoiceDirection: InvoiceDirection): InvoiceData {
+    ): InvoiceData {
+        val direction = calculateInvoiceDirection(invoiceDigest, navTechnicalUser.taxNumber)
 
         return client.query(
             QueryInvoiceDataRequest(
                 config =  createConfig(navTechnicalUser),
                 invoiceNumber = invoiceDigest.invoiceNumber,
-                invoiceDirection = invoiceDirection,
+                invoiceDirection = direction,
                 //supplierTaxNumber can only be filled for inbound invoices according to the NAV online invoice API docs
-                supplierTaxNumber = if(invoiceDirection == InvoiceDirection.INBOUND) invoiceDigest.supplierTaxNumber else null
+                supplierTaxNumber = if(direction == InvoiceDirection.INBOUND) invoiceDigest.supplierTaxNumber else null
             ),
             QueryInvoiceDataResponse::class.java
         ).invoiceData!!
@@ -170,17 +151,4 @@ class NavQueryService(
             )
         )
     }
-
-    data class QueryResult(
-        val invoiceData: InvoiceData,
-        val invoiceDigest: InvoiceDigest,
-        val technicalUser: TechnicalUser,
-        val invoiceDirection: InvoiceDirection
-    )
-
-    data class DigestQueryResult(
-        val invoiceDigest: InvoiceDigest,
-        val technicalUser: TechnicalUser,
-        val invoiceDirection: InvoiceDirection
-    )
 }
