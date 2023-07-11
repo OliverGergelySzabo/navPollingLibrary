@@ -59,7 +59,8 @@ class LifecycleManager(
                         eventPublisherFactory.getEventPublishers(feed.javaClass),
                         navQueryService,
                         currentTimeProvider,
-                        connectionScope
+                        connectionScope,
+                        librarySettings.saveUsersAfterPolling
                     ),
                     librarySettings.pollingFrequency
                 )!!

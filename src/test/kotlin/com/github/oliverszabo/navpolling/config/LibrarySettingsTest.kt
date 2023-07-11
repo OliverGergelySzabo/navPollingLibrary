@@ -231,6 +231,18 @@ class LibrarySettingsTest {
         assertEquals(expectedPasswordHashingRequired, createLibrarySettings().passwordHashingRequired)
     }
 
+    @Test
+    fun ifSaveUsersAfterPollingIsNotSpecifiedThenTheDefaultValueIsReturned() {
+        assertEquals(LibrarySettings.DefaultValues.saveUsersAfterPolling, createLibrarySettings().saveUsersAfterPolling)
+    }
+
+    @Test
+    fun ifSaveUsersAfterPollingIsSpecifiedThenTheCorrectValueIsReturned() {
+        val expectedSaveStateAfterPolling = false
+        every { environment.getProperty<Boolean?>(LibrarySettings.PropertyNames.SAVE_USERS_AFTER_POLLING) } returns expectedSaveStateAfterPolling
+        assertEquals(expectedSaveStateAfterPolling, createLibrarySettings().saveUsersAfterPolling)
+    }
+
     private fun createLibrarySettings(): LibrarySettings {
         return LibrarySettings(environment)
     }

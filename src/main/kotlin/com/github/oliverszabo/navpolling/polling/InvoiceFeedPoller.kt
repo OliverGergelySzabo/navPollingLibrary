@@ -22,6 +22,7 @@ class InvoiceFeedPoller(
     private val navQueryService: NavQueryService,
     private val currentTimeProvider: CurrentTimeProvider,
     private val connectionScope: CoroutineScope,
+    private val saveUsersAfterPolling: Boolean,
 ): Runnable {
     companion object {
         const val POLLING_ERROR_START = "The following error occurred during polling: "
@@ -112,5 +113,8 @@ class InvoiceFeedPoller(
                 }
             }
         invoiceFeed.compareAndSetPollingCompleteUntilForUsers(userWithSuccessfulPolling.toSet(), to)
+        if(saveUsersAfterPolling) {
+            invoiceFeed.saveUsers()
+        }
     }
 }

@@ -115,7 +115,7 @@ abstract class InvoiceFeed(
 
     @Synchronized
     internal fun destroy() {
-        saveUsers(getUsers())
+        saveUsers()
         stop()
     }
 
@@ -127,5 +127,10 @@ abstract class InvoiceFeed(
                 usersByLogin[user.login] = existingUser.withPollingCompleteUntil(newValue)
             }
         }
+    }
+
+    @Synchronized
+    internal fun saveUsers() {
+        saveUsers(getUsers())
     }
 }

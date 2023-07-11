@@ -3,9 +3,11 @@ package com.github.oliverszabo.navpolling
 import com.github.oliverszabo.navpolling.api.InvoiceFeed
 import com.github.oliverszabo.navpolling.polling.NavQueryService
 import com.github.oliverszabo.navpolling.config.LibrarySettings
+import com.github.oliverszabo.navpolling.eventpublishing.EventPublisher
 import com.github.oliverszabo.navpolling.eventpublishing.EventPublisherFactory
 import com.github.oliverszabo.navpolling.polling.InvoiceFeedPoller
 import com.github.oliverszabo.navpolling.util.CurrentTimeProvider
+import com.github.oliverszabo.navpolling.util.forceGet
 import io.mockk.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -39,6 +41,8 @@ class LifecycleManagerTest {
     private val trigger = PeriodicTrigger(1, TimeUnit.DAYS)
     private val scheduledFuture = mockk<ScheduledFuture<*>>(relaxed = true)
     private val connectionScope = mockk<CoroutineScope>(relaxed = true)
+    private val feedEventPublisher = mockk<EventPublisher>(relaxed = true)
+    private val otherFeedEventPublisher = mockk<EventPublisher>(relaxed = true)
 
     private val shutdownTimout = 10
 
@@ -67,6 +71,7 @@ class LifecycleManagerTest {
         every { librarySettings.pollingPoolSize } returns 3
         every { librarySettings.pollingFrequency } returns trigger
         every { librarySettings.shutdownTimeout } returns shutdownTimout
+        every { librarySettings.saveUsersAfterPolling } returns true
 
         every { eventPublisherFactory.getEventPublishers(any()) } returns emptyList()
         every { scheduledFuture.cancel(any()) } returns true
@@ -118,6 +123,14 @@ class LifecycleManagerTest {
             createdTriggers.add(secondArg())
             mockk(relaxed = true)
         }
+        every { eventPublisherFactory.getEventPublishers(any()) } answers {
+            val feedClass = firstArg<Class<out InvoiceFeed>>()
+            if(feedClass == Feed::class.java) {
+                listOf(feedEventPublisher)
+            } else {
+                listOf(otherFeedEventPublisher)
+            }
+        }
 
         createLifeCycleManager()
         manager!!.start()
@@ -129,7 +142,7 @@ class LifecycleManagerTest {
                 eventPublisherFactory.getEventPublishers(eq(feed.javaClass))
             }
             val poller = createdPollers.find { it.invoiceFeed == feed }
-            assertNotNull(poller)
+            assertCreatedPoller(feed, poller)
             createdPollers.remove(poller)
         }
         assertEquals(feeds.size, createdTriggers.size)
@@ -165,5 +178,23 @@ class LifecycleManagerTest {
 
     private fun createLifeCycleManager() {
         manager = LifecycleManager(feeds, librarySettings, navQueryService, eventPublisherFactory, currentTimeProvider)
+    }
+
+    private fun getField(obj: Any, fieldName: String): Any? {
+        return obj::class.java.declaredFields.find { it.name == fieldName }!!.forceGet(obj)
+    }
+
+    private fun assertCreatedPoller(expectedInvoiceFeed: InvoiceFeed, poller: InvoiceFeedPoller?) {
+        assertNotNull(poller)
+        assertEquals(expectedInvoiceFeed, poller!!.invoiceFeed)
+        if(expectedInvoiceFeed is Feed) {
+            assertEquals(listOf(feedEventPublisher), getField(poller, "eventPublishers"))
+        } else {
+            assertEquals(listOf(otherFeedEventPublisher), getField(poller, "eventPublishers"))
+        }
+        assertEquals(navQueryService, getField(poller, "navQueryService"))
+        assertEquals(currentTimeProvider, getField(poller, "currentTimeProvider"))
+        assertEquals(connectionScope, getField(poller, "connectionScope"))
+        assertEquals(librarySettings.saveUsersAfterPolling, getField(poller, "saveUsersAfterPolling"))
     }
 }

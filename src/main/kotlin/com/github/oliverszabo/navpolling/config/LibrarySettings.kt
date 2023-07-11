@@ -28,7 +28,8 @@ class LibrarySettings(
     val defaultPastFetchingPeriod: Int = initializeDefaultPastFetchingPeriod()
     val shutdownTimeout: Int = initializeShutdownTimeout()
     val requestTimeout: Int = initializeRequestTimeout()
-    val passwordHashingRequired: Boolean = initializePasswordHashingRequired()
+    val passwordHashingRequired: Boolean = initializeBoolean(PropertyNames.PASSWORD_HASHING_REQUIRED, DefaultValues.passwordHashingRequired)
+    val saveUsersAfterPolling: Boolean = initializeBoolean(PropertyNames.SAVE_USERS_AFTER_POLLING, DefaultValues.saveUsersAfterPolling)
 
     private fun initializePollingFrequency(): Trigger {
         val specifiedPollingFrequency = environment.getProperty(PropertyNames.POLLING_FREQUENCY)
@@ -104,8 +105,8 @@ class LibrarySettings(
         return specifiedRequestTimeout
     }
 
-    private fun initializePasswordHashingRequired(): Boolean {
-         return environment.getProperty<Boolean?>(PropertyNames.PASSWORD_HASHING_REQUIRED) ?: DefaultValues.passwordHashingRequired
+    private fun initializeBoolean(propertyName: String, defaultValue: Boolean): Boolean {
+         return environment.getProperty<Boolean?>(propertyName) ?: defaultValue
     }
 
     object PropertyNames {
@@ -116,6 +117,7 @@ class LibrarySettings(
         const val SHUTDOWN_TIMEOUT = "nav-polling.shutdown-timeout"
         const val REQUEST_TIMEOUT = "nav-polling.request-timeout"
         const val PASSWORD_HASHING_REQUIRED = "nav-polling.password-hashing-required"
+        const val SAVE_USERS_AFTER_POLLING = "nav-polling.save-state-users-polling"
     }
     object DefaultValues {
         const val pollingPoolSize = 5
@@ -125,5 +127,6 @@ class LibrarySettings(
         const val shutdownTimeout = 10
         const val requestTimeout = 5000
         const val passwordHashingRequired = false
+        const val saveUsersAfterPolling = true
     }
 }

@@ -57,6 +57,7 @@ class InvoiceFeedPollerTest {
         every { invoiceFeed.isRunning() } returns true
         every { invoiceFeed.getUsers() } returns emptySet()
         every { invoiceFeed.getPastFetchingPeriod() } returns 0
+        every { invoiceFeed.saveUsers() } returns Unit
 
         coEvery { navQueryService.fetchInvoiceDigests(any(), any()) } returns emptyList()
         coEvery { navQueryService.fetchInvoiceDigestsAndData(any(), any()) } returns emptyList()
@@ -80,7 +81,7 @@ class InvoiceFeedPollerTest {
         every { invoiceFeed.getPastFetchingPeriod() } returns pastFetchingPeriod
         every { invoiceFeed.getUsers() } returns setOf(technicalUser)
 
-        createAndRunInvoiceFeedPoller()
+        createAndRunInvoiceFeedPoller(true)
 
         coVerify(exactly = 0) {
             navQueryService.fetchInvoiceDigestsAndData(any(), any())
@@ -95,6 +96,8 @@ class InvoiceFeedPollerTest {
                 publisher.publishInvoiceArrivedEvent(any(), any(), any())
             }
         }
+        //if no polling happens save then save should never be called (as there is no change is user state)
+        verifySaveUsersIsNotCalled()
     }
 
     @Test
@@ -103,7 +106,7 @@ class InvoiceFeedPollerTest {
         coEvery { navQueryService.fetchInvoiceDigests(any(), any()) } throws NavInvoiceServiceConnectionException(cause)
         every { invoiceFeed.getUsers() } returns setOf(technicalUser)
 
-        createAndRunInvoiceFeedPoller()
+        createAndRunInvoiceFeedPoller(true)
 
         verify(exactly = 1) {
             logger.error(
@@ -121,6 +124,8 @@ class InvoiceFeedPollerTest {
                 publisher.publishInvoiceArrivedEvent(any(), any(), any())
             }
         }
+        //if polling is interrupted (and saveUsersAfterPolling is true) then no save should happen
+        verifySaveUsersIsNotCalled()
     }
 
     @Test
@@ -144,7 +149,7 @@ class InvoiceFeedPollerTest {
                     )
                 )
             )
-            // pollingCompleteUntil is only updated for the user without error
+            //pollingCompleteUntil is only updated for the user without error
             invoiceFeed.compareAndSetPollingCompleteUntilForUsers(
                 eq(setOf(otherTechnicalUser)),
                 eq(nowTruncated)
@@ -158,6 +163,7 @@ class InvoiceFeedPollerTest {
                 publisher.publishInvoiceArrivedEvent(any(), any(), any(), any())
             }
         }
+        verifySaveUsersIsNotCalled()
     }
 
     @Test
@@ -168,7 +174,7 @@ class InvoiceFeedPollerTest {
         every { invoiceFeed.getUsers() } returns setOf(technicalUser, otherTechnicalUser)
         every { eventPublishers[0].isOnlyDigestDataRequired } returns false
 
-        createAndRunInvoiceFeedPoller()
+        createAndRunInvoiceFeedPoller(true)
 
         verify(exactly = 1) {
             logger.error(
@@ -201,6 +207,8 @@ class InvoiceFeedPollerTest {
                 )
             }
         }
+        //if a non-interrupting exception occurs (and saveUsersAfterPolling is true) then save is called
+        verifySaveUsersIsCalled()
     }
 
     @Test
@@ -236,6 +244,7 @@ class InvoiceFeedPollerTest {
                 publisher.publishInvoiceArrivedEvent(any(), any(), any(), any())
             }
         }
+        verifySaveUsersIsNotCalled()
     }
 
     @Test
@@ -247,7 +256,7 @@ class InvoiceFeedPollerTest {
         every { invoiceFeed.getUsers() } returns allUsers
         every { eventPublishers[0].isOnlyDigestDataRequired } returns false
 
-        createAndRunInvoiceFeedPoller()
+        createAndRunInvoiceFeedPoller(true)
 
         allUsers.forEach { user ->
             coVerify(exactly = 1) {
@@ -266,14 +275,31 @@ class InvoiceFeedPollerTest {
         }
         eventPublishers.forEach { publisher ->
             verify(exactly = 1) {
-                publisher.publishInvoiceArrivedEvent(outBoundInvoiceDigest, invoiceData, technicalUser, InvoiceDirection.OUTBOUND)
-                publisher.publishInvoiceArrivedEvent(inboundInvoiceDigest, invoiceData, otherTechnicalUser, InvoiceDirection.INBOUND)
-                publisher.publishInvoiceArrivedEvent(otherInboundInvoiceDigest, invoiceData, otherTechnicalUser, InvoiceDirection.INBOUND)
+                publisher.publishInvoiceArrivedEvent(
+                    outBoundInvoiceDigest,
+                    invoiceData,
+                    technicalUser,
+                    InvoiceDirection.OUTBOUND
+                )
+                publisher.publishInvoiceArrivedEvent(
+                    inboundInvoiceDigest,
+                    invoiceData,
+                    otherTechnicalUser,
+                    InvoiceDirection.INBOUND
+                )
+                publisher.publishInvoiceArrivedEvent(
+                    otherInboundInvoiceDigest,
+                    invoiceData,
+                    otherTechnicalUser,
+                    InvoiceDirection.INBOUND
+                )
             }
             verify(exactly = 0) {
                 publisher.publishInvoiceArrivedEvent(any(), any(), any())
             }
         }
+        //if saveUsersAfterPolling is true then save user is called
+        verifySaveUsersIsCalled()
     }
 
     @Test
@@ -300,6 +326,7 @@ class InvoiceFeedPollerTest {
             )
             eventPublishers[1].publishInvoiceArrivedEvent(inboundInvoiceDigest, technicalUser, InvoiceDirection.INBOUND)
         }
+        verifySaveUsersIsNotCalled()
     }
 
     @Test
@@ -316,7 +343,7 @@ class InvoiceFeedPollerTest {
         every { method.declaringClass.canonicalName } returns "canonical.name.DeclaringClass"
         every { eventPublishers[0].eventHandlerMethod } returns method*/
 
-        createAndRunInvoiceFeedPoller()
+        createAndRunInvoiceFeedPoller(true)
 
         verify(exactly = 1) {
             //todo: implement checking for error message
@@ -328,10 +355,19 @@ class InvoiceFeedPollerTest {
             )
             eventPublishers[1].publishInvoiceArrivedEvent(inboundInvoiceDigest, invoiceData, technicalUser, InvoiceDirection.INBOUND)
         }
+        //if a non-interrupting exception occurs (and saveUsersAfterPolling is true) then save is called
+        verifySaveUsersIsCalled()
     }
 
-    private fun createAndRunInvoiceFeedPoller(): InvoiceFeedPoller {
-        return InvoiceFeedPoller(invoiceFeed, eventPublishers, navQueryService, currentTimeProvider, connectionScope).apply { run() }
+    private fun createAndRunInvoiceFeedPoller(saveUsersAfterPolling: Boolean = false): InvoiceFeedPoller {
+        return InvoiceFeedPoller(
+            invoiceFeed,
+            eventPublishers,
+            navQueryService,
+            currentTimeProvider,
+            connectionScope,
+            saveUsersAfterPolling
+        ).apply { run() }
     }
 
     private fun createInvoiceDigest(invoiceNumber: String, supplierTaxNumber: String): InvoiceDigest {
@@ -346,5 +382,17 @@ class InvoiceFeedPollerTest {
             batchIndex = BigInteger("10"),
             invoiceNetAmount = BigDecimal("10.9999999995")
         )
+    }
+
+    private fun verifySaveUsersIsNotCalled() {
+        verify(exactly = 0) {
+            invoiceFeed.saveUsers()
+        }
+    }
+
+    private fun verifySaveUsersIsCalled() {
+        verify(exactly = 1) {
+            invoiceFeed.saveUsers()
+        }
     }
 }
