@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ns2:GeneralErrorResponse xmlns="http://schemas.nav.gov.hu/NTCA/1.0/common" xmlns:ns2="http://schemas.nav.gov.hu/OSA/3.0/api" xmlns:ns3="http://schemas.nav.gov.hu/OSA/3.0/base" xmlns:ns4="http://schemas.nav.gov.hu/OSA/3.0/data">
+    <header>
+        <requestId>klasjgkljadkj</requestId>
+        <timestamp>2023-11-01T22:12:48.671Z</timestamp>
+        <requestVersion>3.0</requestVersion>
+        <headerVersion>1.0</headerVersion>
+    </header>
+    <result>
+        <funcCode>%s</funcCode>
+        <errorCode>%s</errorCode>
+        <message>%s</message>
+    </result>
+    <ns2:software>
+        <ns2:softwareId>HU123456789</ns2:softwareId>
+        <ns2:softwareName>Nav polling library</ns2:softwareName>
+        <ns2:softwareOperation>LOCAL_SOFTWARE</ns2:softwareOperation>
+        <ns2:softwareMainVersion>0.1</ns2:softwareMainVersion>
+        <ns2:softwareDevName>Dev Name</ns2:softwareDevName>
+        <ns2:softwareDevContact>dev@emai.com</ns2:softwareDevContact>
+        <ns2:softwareDevCountryCode>HU</ns2:softwareDevCountryCode>
+    </ns2:software>
+</ns2:GeneralErrorResponse>
