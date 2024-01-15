@@ -79,14 +79,6 @@ class NavQueryServiceTest {
         every { librarySettings.connectionPoolSize } returns 1
         every { librarySettings.requestTimeout } returns 1000
 
-        mockkObject(NavTechnicalUser.Companion)
-        every { NavTechnicalUser.from(any(), any()) } answers {
-            // assertion for the fact that the NavQueryService call the NavTechnicalUser.from
-            // with the correct value form library settings
-            assertEquals(librarySettings.passwordHashingRequired, secondArg())
-            callOriginal()
-        }
-
         navQueryService = NavQueryService(librarySettings)
     }
 
@@ -132,11 +124,8 @@ class NavQueryServiceTest {
         }
     }
 
-    //parametrized test is needed to test both cases for NavTechnicalUser.from call correctness
-    @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun `fetchInvoiceDigests correctly fetches and filters data`(passwordHashingRequired: Boolean) {
-        every { librarySettings.passwordHashingRequired } returns passwordHashingRequired
+    @Test
+    fun `fetchInvoiceDigests correctly fetches and filters data`() {
         mockNavClient()
 
         runBlocking {
@@ -151,11 +140,8 @@ class NavQueryServiceTest {
         }
     }
 
-    //parametrized test is needed to test both cases for NavTechnicalUser.from call correctness
-    @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun `fetchInvoiceDigestsAndData correctly fetches and filters data`(passwordHashingRequired: Boolean) {
-        every { librarySettings.passwordHashingRequired } returns passwordHashingRequired
+    @Test
+    fun `fetchInvoiceDigestsAndData correctly fetches and filters data`() {
         mockNavClient()
 
         runBlocking {
@@ -170,11 +156,8 @@ class NavQueryServiceTest {
         }
     }
 
-    //parametrized test is needed to test both cases for NavTechnicalUser.from call correctness
-    @ParameterizedTest
-    @ValueSource(booleans = [true, false])
-    fun `fetchInvoiceDigestsAndData skips and logs batchInvoices`(passwordHashingRequired: Boolean) {
-        every { librarySettings.passwordHashingRequired } returns passwordHashingRequired
+    @Test
+    fun `fetchInvoiceDigestsAndData skips and logs batchInvoices`() {
         mockNavClient { NavDataCreator.batchInvoiceData }
 
         runBlocking {
@@ -282,7 +265,7 @@ class NavQueryServiceTest {
     private fun createTechnicalUser(taxNumber: String, pollingDirections: Set<InvoiceDirection>, pollingCompleteUntil: Instant?): TechnicalUser {
         return TechnicalUser(
             login = "${taxNumber}-login",
-            password = "${taxNumber}-password",
+            passwordHash = "${taxNumber}-password",
             taxNumber = taxNumber,
             sigKey = "${taxNumber}-sigKey",
             pollingDirections = pollingDirections,

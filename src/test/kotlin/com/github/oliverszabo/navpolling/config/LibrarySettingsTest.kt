@@ -261,18 +261,6 @@ class LibrarySettingsTest {
     }
 
     @Test
-    fun `if passwordHashingRequired is not specified then the default value is returned`() {
-        assertEquals(DefaultValues.passwordHashingRequired, createLibrarySettings().passwordHashingRequired)
-    }
-
-    @Test
-    fun `if passwordHashingRequired is specified then the correct value is returned`() {
-        val expectedPasswordHashingRequired = true
-        every { environment.getProperty<Boolean?>(PropertyNames.PASSWORD_HASHING_REQUIRED) } returns expectedPasswordHashingRequired
-        assertEquals(expectedPasswordHashingRequired, createLibrarySettings().passwordHashingRequired)
-    }
-
-    @Test
     fun `if saveUsersAfterPolling is not specified then the default value is returned`() {
         assertEquals(DefaultValues.saveUsersAfterPolling, createLibrarySettings().saveUsersAfterPolling)
     }

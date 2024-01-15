@@ -41,7 +41,6 @@ class LibrarySettings(
     val defaultPastFetchingPeriod = initializeDefaultPastFetchingPeriod()
     val shutdownTimeout = initializeShutdownTimeout()
     val requestTimeout= initializeRequestTimeout()
-    val passwordHashingRequired = initializeBoolean(PropertyNames.PASSWORD_HASHING_REQUIRED, DefaultValues.passwordHashingRequired)
     val saveUsersAfterPolling = initializeBoolean(PropertyNames.SAVE_USERS_AFTER_POLLING, DefaultValues.saveUsersAfterPolling)
     val consumerSoftwareInfo = Software(
         softwareId = initializeSoftwareId(),
@@ -186,7 +185,6 @@ class LibrarySettings(
         const val DEFAULT_PAST_FETCHING_PERIOD = "nav-polling.default-past-fetching-period"
         const val SHUTDOWN_TIMEOUT = "nav-polling.shutdown-timeout"
         const val REQUEST_TIMEOUT = "nav-polling.request-timeout"
-        const val PASSWORD_HASHING_REQUIRED = "nav-polling.password-hashing-required"
         const val SAVE_USERS_AFTER_POLLING = "nav-polling.save-users-after-polling"
 
         object ConsumerSoftwareInfo {
@@ -207,7 +205,6 @@ class LibrarySettings(
         const val defaultPastFetchingPeriod = 0
         const val shutdownTimeout = 10
         const val requestTimeout = 5000
-        const val passwordHashingRequired = false
         const val saveUsersAfterPolling = true
     }
 }

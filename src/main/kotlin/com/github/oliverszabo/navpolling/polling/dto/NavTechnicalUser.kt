@@ -10,10 +10,10 @@ data class NavTechnicalUser(
     val sigKey: String
 ) {
     companion object {
-        fun from(technicalUser: TechnicalUser, hashPassword: Boolean): NavTechnicalUser {
+        fun from(technicalUser: TechnicalUser): NavTechnicalUser {
             return NavTechnicalUser(
                 login = technicalUser.login,
-                passwordHash = if(hashPassword) sha512Hash(technicalUser.password) else technicalUser.password,
+                passwordHash = technicalUser.passwordHash,
                 taxNumber = technicalUser.taxNumber,
                 sigKey = technicalUser.sigKey
             )

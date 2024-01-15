@@ -11,3 +11,5 @@ class NavQueryException(val funcCode: String?, val errorCode: String?, message: 
 class ErrorOccurredInEventHandlerException(cause: Throwable): NavPollingLibraryException(cause = cause)
 
 class InvoiceMappingException(val targetClass: Class<*>, cause: Throwable): NavPollingLibraryException(cause = cause)
+
+class TechnicalUserCreationException(message: String): NavPollingLibraryException(message)

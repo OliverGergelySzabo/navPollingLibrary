@@ -37,7 +37,7 @@ class NavQueryService(
         val client = NavClient(librarySettings.requestTimeout)
         return fetchInvoiceDigests(technicalUser, to)
             .mapNotNull { invoiceDigest ->
-                val invoiceData  = fetchInvoiceData(client, NavTechnicalUser.from(technicalUser, librarySettings.passwordHashingRequired), invoiceDigest)
+                val invoiceData  = fetchInvoiceData(client, NavTechnicalUser.from(technicalUser), invoiceDigest)
                     ?: return@mapNotNull null
                 Pair(invoiceDigest, invoiceData)
             }
@@ -60,7 +60,7 @@ class NavQueryService(
                 technicalUser.pollingDirections.map { direction ->
                     fetchInvoiceDigestsForPeriod(
                         client,
-                        NavTechnicalUser.from(technicalUser, librarySettings.passwordHashingRequired),
+                        NavTechnicalUser.from(technicalUser),
                         direction,
                         from,
                         to
